@@ -308,9 +308,9 @@ void createTriangle ()
 
   /* Define vertex array as used in glBegin (GL_TRIANGLES) */
   static const GLfloat vertex_buffer_data [] = {
-    0, 1,0, // vertex 0
-    -1,-1,0, // vertex 1
-    1,-1,0, // vertex 2
+    0, -1,0, // vertex 0
+    4.0,4.0,0, // vertex 1
+    -4,-4,0, // vertex 2
   };
 
   static const GLfloat color_buffer_data [] = {
@@ -328,32 +328,14 @@ void createRectangle ()
 {
   // GL3 accepts only Triangles. Quads are not supported
   static const GLfloat vertex_buffer_data [] = {
-  /*  -1.2,-1,0, // vertex 1
+    -1.2,-1,0, // vertex 1
     1.2,-1,0, // vertex 2
     1.2, 0.5,0, // vertex 3
 
     1.2, 0.5,0, // vertex 3
     -1.2, 1,0, // vertex 4
-    -1.2,-1,0  // vertex 1 */
-    0,-1,0,
-    1,0,0,
-    0,0,0,
+    -1.2,-1,0  // vertex 1
 
-    1,0,0,
-    1,1,0,
-    0,0,0,
-
-    1,1,0,
-    -1,1,0,
-    0,0,0,
-
-    -1,1,0,
-    -1,0,0,
-    0,0,0,
-
-    -1,0,0,
-    0,-1,0,
-    0,0,0
   };
 
   static const GLfloat color_buffer_data [] = {
@@ -365,17 +347,6 @@ void createRectangle ()
     0.3,0.3,0.3, // color 4
     1,0,0,  // color 1
 
-    1,0,0, // color 1
-    0,0,1, // color 2
-    0,1,0, // color 3
-
-    1,0,0, // color 1
-    0,0,1, // color 2
-    0,1,0, // color 3
-
-    1,0,0, // color 1
-    0,0,1, // color 2
-    0,1,0 // color 3
   };
 
   // create3DObject creates and returns a handle to a VAO that can be used later
@@ -416,18 +387,16 @@ void draw ()
   // Send our transformation to the currently bound shader, in the "MVP" uniform
   // For each model you render, since the MVP will be different (at least the M part)
   //  Don't change unless you are sure!!
+
   glm::mat4 MVP;	// MVP = Projection * View * Model
+
+  /*my code in draw function starts here */
 
   // Load identity to model matrix
   Matrices.model = glm::mat4(1.0f);
 
-  /* Render your scene */
-
-  glm::mat4 translateTriangle = glm::translate (glm::vec3(-2.0f, 0.0f, 0.0f)); // glTranslatef
-  glm::mat4 rotateTriangle = glm::rotate((float)(triangle_rotation*M_PI/180.0f), glm::vec3(0,0,1));  // rotate about vector (1,0,0)
-  glm::mat4 triangleTransform = translateTriangle * rotateTriangle;
-  Matrices.model *= triangleTransform;
   MVP = VP * Matrices.model; // MVP = p * V * M
+
 
   //  Don't change unless you are sure!!
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
@@ -435,11 +404,6 @@ void draw ()
   // draw3DObject draws the VAO given to it using current MVP matrix
   draw3DObject(triangle);
 
-  float increments = 0;
-
-  //camera_rotation_angle++; // Simulating camera rotation
-  triangle_rotation = triangle_rotation + increments*triangle_rot_dir*triangle_rot_status;
-  rectangle_rotation = rectangle_rotation + increments*rectangle_rot_dir*rectangle_rot_status;
 }
 
 /* Initialise glfw window, I/O callbacks and the renderer to use */
