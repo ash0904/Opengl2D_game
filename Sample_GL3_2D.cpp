@@ -25,6 +25,12 @@ struct VAO { // vertex array object
 };
 typedef struct VAO VAO;
 
+typedef struct COLOR {
+    float r;
+    float g;
+    float b;
+} COLOR;
+
 struct GLMatrices {
 	glm::mat4 projection;
 	glm::mat4 model;
@@ -299,7 +305,29 @@ void reshapeWindow (GLFWwindow* window, int width, int height)
     Matrices.projection = glm::ortho(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 500.0f);
 }
 
-VAO *triangle, *rectangle;
+VAO *triangle, *rectangle, *line;
+
+void createLine (int x1,int y1,int x2,int y2)
+{
+  /* ONLY vertices between the bounds specified in glm::ortho will be visible on screen */
+
+  /* Define vertex array as used in glBegin (GL_TRIANGLES) */
+  static const GLfloat vertex_buffer_data [] = {
+    x1, y2,0, // vertex 0
+    (x1+x2)/2,(y1+y2)/2,0, // vertex 1
+    x2,y2,0, // vertex 2
+  };
+
+  static const GLfloat color_buffer_data [] = {
+    0,0,0, // color 0
+    0,0,0, // color 1
+    0,0,0, // color 2
+  };
+
+  // create3DObject creates and returns a handle to a VAO that can be used later
+  line = create3DObject(GL_TRIANGLES, 3, vertex_buffer_data, color_buffer_data, GL_LINE);
+}
+
 
 // Creates the triangle object used in this sample code
 void createTriangle ()
@@ -308,7 +336,7 @@ void createTriangle ()
 
   /* Define vertex array as used in glBegin (GL_TRIANGLES) */
   static const GLfloat vertex_buffer_data [] = {
-    0, -1,0, // vertex 0
+    0, 0,0, // vertex 0
     4.0,4.0,0, // vertex 1
     -4,-4,0, // vertex 2
   };
@@ -322,6 +350,7 @@ void createTriangle ()
   // create3DObject creates and returns a handle to a VAO that can be used later
   triangle = create3DObject(GL_TRIANGLES, 3, vertex_buffer_data, color_buffer_data, GL_LINE);
 }
+
 
 // Creates the rectangle object used in this sample code
 void createRectangle ()
@@ -397,12 +426,12 @@ void draw ()
 
   MVP = VP * Matrices.model; // MVP = p * V * M
 
-
+  // glUniformMatrix4fv always used before calling draw function
   //  Don't change unless you are sure!!
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
 
   // draw3DObject draws the VAO given to it using current MVP matrix
-  draw3DObject(triangle);
+  draw3DObject(line);
 
 }
 
@@ -460,8 +489,9 @@ void initGL (GLFWwindow* window, int width, int height)
 {
     /* Objects should be created before any other gl function and shaders */
 	// Create the models
+
 	createTriangle (); // Generate the VAO, VBOs, vertices data & copy into the array buffer
-	createRectangle ();
+	createLine(-4,-2.5,4,-2.5);
 
 	// Create and compile our GLSL program from the shaders
 	programID = LoadShaders( "Sample_GL.vert", "Sample_GL.frag" );
