@@ -50,9 +50,10 @@ typedef struct Base {
     COLOR color;          // color of object
     float x,y;            // co-odinates
     VAO* object;          // shape of object
-    int status;           // doubt???
+    int key_press;           // doubt???
     float height,width;
     float x_speed,y_speed;
+    float dx,dy;          // amount to be moved
     float radius;
     int inAir;            // boolean 0 or 1
     int fixed;            // boolean 0 or 1
@@ -244,24 +245,47 @@ void draw3DObject (struct VAO* vao)
 /**************************
  * Customizable functions *
  **************************/
-
+float cannon_y_pos=0;
 
 /* Executed when a regular key is pressed/released/held-down */
 /* Prefered for Keyboard events */
 void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+    //for detecting multiple key press
+    glfwSetInputMode(window, GLFW_STICKY_KEYS, 1);
      // Function is called first on GLFW_PRESS.
 
     if (action == GLFW_RELEASE) {
         switch (key) {
-            case GLFW_KEY_C:
-//                rectangle_rot_status = !rectangle_rot_status;
+            case GLFW_KEY_S:
+                cannon["main"].dy=0;
+                cannon["front"].dy=0;
+                cannon["main"].key_press=0;
+                cannon["front"].key_press=0;
                 break;
-            case GLFW_KEY_P:
-//                triangle_rot_status = !triangle_rot_status;
+            case GLFW_KEY_F:
+                cannon["main"].dy=0;
+                cannon["front"].dy=0;
+                cannon["main"].key_press=0;
+                cannon["front"].key_press=0;
+                break;
+            case GLFW_KEY_LEFT:
+                bucket["red"].dx=0;
+                bucket["red"].key_press=0;
+                break;
+            case GLFW_KEY_RIGHT:
+                bucket["red"].dx=0;
+                bucket["red"].key_press=0;
+                break;
+            case GLFW_KEY_UP:
+                bucket["green"].dx=0;
+                bucket["green"].key_press=0;
+                break;
+            case GLFW_KEY_DOWN:
+                bucket["green"].dx=0;
+                bucket["green"].key_press=0;
                 break;
             case GLFW_KEY_X:
-                // do something ..
                 break;
             default:
                 break;
@@ -269,10 +293,38 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
     }
     else if (action == GLFW_PRESS) {
         switch (key) {
-            case GLFW_KEY_ESCAPE:
+          case GLFW_KEY_S:
+              cannon["main"].dy=3;
+              cannon["front"].dy=3;
+              cannon["main"].key_press=1;
+              cannon["front"].key_press=1;
+              break;
+          case GLFW_KEY_F:
+              cannon["main"].dy=-3;
+              cannon["front"].dy=-3;
+              cannon["main"].key_press=1;
+              cannon["front"].key_press=1;
+              break;
+          case GLFW_KEY_LEFT:
+              bucket["red"].dx=-3;
+              bucket["red"].key_press=1;
+              break;
+          case GLFW_KEY_RIGHT:
+              bucket["red"].dx=3;
+              bucket["red"].key_press=1;
+              break;
+          case GLFW_KEY_UP:
+              bucket["green"].dx=-3;
+              bucket["green"].key_press=1;
+              break;
+          case GLFW_KEY_DOWN:
+              bucket["green"].dx=3;
+              bucket["green"].key_press=1;
+              break;
+          case GLFW_KEY_ESCAPE:
                 quit(window);
                 break;
-            default:
+          default:
                 break;
         }
     }
@@ -366,13 +418,13 @@ void createTriangle ()
   /* ONLY vertices between the bounds specified in glm::ortho will be visible on screen */
 
   /* Define vertex array as used in glBegin (GL_TRIANGLES) */
-  static const GLfloat vertex_buffer_data [] = {
+  GLfloat vertex_buffer_data [] = {
     0, 0,0, // vertex 0
     4.0,4.0,0, // vertex 1
     -4,-4,0, // vertex 2
   };
 
-  static const GLfloat color_buffer_data [] = {
+  GLfloat color_buffer_data [] = {
     1,0,0, // color 0
     0,1,0, // color 1
     0,0,1, // color 2
@@ -480,8 +532,18 @@ void draw ()
   draw3DObject(line);
 
 
+  if(bucket["red"].key_press==1 || bucket["green"].key_press==1)
+  {
+        bucket["red"].x+=bucket["red"].dx;;
+        bucket["green"].x+=bucket["green"].dx;;
+  }
   display(bucket["green"],VP);
   display(bucket["red"],VP);
+  if(cannon["main"].key_press==1)
+  {
+    cannon["main"].y+=cannon["main"].dy;
+    cannon["front"].y+=cannon["front"].dy;
+  }
   display(cannon["main"],VP);
   display(cannon["front"],VP);
 }
