@@ -38,7 +38,7 @@ COLOR lightgreen = {57/255.0,230/255.0,0/255.0};
 COLOR darkgreen = {51/255.0,102/255.0,0/255.0};
 COLOR black = {30/255.0,30/255.0,21/255.0};
 COLOR blue = {0,0,1};
-COLOR green = {0.0f,1.0f,0.0f};
+COLOR green = {1.0/255.0,255.0/255.0,1.0/255.0};
 COLOR darkbrown = {46/255.0,46/255.0,31/255.0};
 COLOR lightbrown = {95/255.0,63/255.0,32/255.0};
 COLOR lightpink = {255/255.0,122/255.0,173/255.0};
@@ -60,7 +60,7 @@ typedef struct Base {
 } Base;
 
 map <string, Base> objects;
-map <string, Base> cannonObjects; //Only store cannon components here
+map <string, Base> cannon; //Only store cannon components here
 map <string, Base> bricks;
 map <string, Base> mirror;
 map <string, Base> bucket;
@@ -336,7 +336,7 @@ void reshapeWindow (GLFWwindow* window, int width, int height)
     Matrices.projection = glm::ortho(-500.0f, 500.0f, -350.0f, 350.0f, 0.1f, 500.0f);
 }
 
-VAO *triangle, *rectangle, *line;
+VAO *triangle, *line;
 
 void createLine (int x1,int y1,int x2,int y2)
 {
@@ -384,7 +384,7 @@ void createTriangle ()
 
 
 // Creates the rectangle object used in this sample code
-VAO* createRectangle (string name, COLOR color1, float x, float y, float height, float width)
+VAO* createRectangle (COLOR color1, float height, float width)
 {
   // GL3 accepts only Triangles. Quads are not supported
   float w=width/2,h=height/2;
@@ -398,7 +398,7 @@ VAO* createRectangle (string name, COLOR color1, float x, float y, float height,
       -w,-h,0  // vertex 1
   };
 
-  static const GLfloat color_buffer_data [] = {
+   GLfloat color_buffer_data [] = {
     color1.r,color1.g,color1.b, // color 1
     color1.r,color1.g,color1.b, // color 2
     color1.r,color1.g,color1.b, // color 3
@@ -409,16 +409,32 @@ VAO* createRectangle (string name, COLOR color1, float x, float y, float height,
 
   };
 
+
   // create3DObject creates and returns a handle to a VAO that can be used later
-  rectangle = create3DObject(GL_TRIANGLES, 6, vertex_buffer_data, color_buffer_data, GL_FILL);
-  return rectangle;
+
+    return create3DObject(GL_TRIANGLES, 6, vertex_buffer_data, color_buffer_data, GL_FILL);
+
 }
 
 float camera_rotation_angle = 90;
 float rectangle_rotation = 0;
 float triangle_rotation = 0;
 
-/* Render the scene with openGL */
+void display(Base obj,glm::mat4 VP)
+{
+  glm::mat4 MVP;
+  Matrices.model = glm::mat4(1.0f);
+  MVP = VP * Matrices.model; // MVP = p * V * M
+  glm::mat4 ObjectTransform;
+  glm::mat4 translateObject = glm::translate (glm::vec3(obj.x,obj.y, 0.0f)); // glTranslatef
+  ObjectTransform=translateObject;
+  Matrices.model *= ObjectTransform;
+  MVP = VP * Matrices.model; // MVP = p * V * M
+
+  glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
+  draw3DObject(obj.object);
+}
+
 /* Edit this function according to your assignment */
 void draw ()
 {
@@ -454,21 +470,20 @@ void draw ()
   glm::mat4 MVP;	// MVP = Projection * View * Model
 /* till here */
 /*my code in draw function starts here */
+// glUniformMatrix4fv always used before calling draw function
+//  Don't change unless you are sure!!
 
   // Load identity to model matrix
   Matrices.model = glm::mat4(1.0f);
-
   MVP = VP * Matrices.model; // MVP = p * V * M
-
-  // glUniformMatrix4fv always used before calling draw function
-  //  Don't change unless you are sure!!
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-
-  // draw3DObject draws the VAO given to it using current MVP matrix
   draw3DObject(line);
-  draw3DObject(bucket["red"].object);
-  //draw3DObject(bucket["green"].object);
 
+
+  display(bucket["green"],VP);
+  display(bucket["red"],VP);
+  display(cannon["main"],VP);
+  display(cannon["front"],VP);
 }
 
 /* Initialise glfw window, I/O callbacks and the renderer to use */
@@ -519,16 +534,57 @@ GLFWwindow* initGLFW (int width, int height)
     return window;
 }
 
+/* my defined functions for creating objects */
+void create_bucket(string color)
+{
+  bucket[color].height=150;
+  bucket[color].width=150;
+  if(color=="red")
+  {
+    bucket[color].object = createRectangle (red, bucket[color].height,bucket[color].width);
+    bucket[color].name = color + "_bucket";
+    bucket[color].color=red;
+    bucket[color].x=-200;
+    bucket[color].y=-270;
+  }
+  if(color=="green")
+    {
+      bucket[color].object = createRectangle (green,bucket[color].height ,bucket[color].width);
+      bucket[color].name = color + "_bucket";
+      bucket[color].color=green;
+      bucket[color].x=200;
+      bucket[color].y=-270;
+    }
+  //cout<<bucket[color].name;
+}
+
+void create_cannon()
+{
+  cannon["main"].color=blue;
+  cannon["main"].width=50;
+  cannon["main"].height=35;
+  cannon["main"].object = createRectangle (blue, cannon["main"].height,cannon["main"].width);
+  cannon["main"].x=-500+cannon["main"].width/2;
+  cannon["main"].y=0;
+  cannon["front"].color=blue;
+  cannon["front"].width=35;
+  cannon["front"].height=20;
+  cannon["front"].object = createRectangle (blue, cannon["front"].height,cannon["front"].width);
+  cannon["front"].x=-500+cannon["main"].width+cannon["front"].width/2;
+  cannon["front"].y=0;
+
+}
+
 /* Initialize the OpenGL rendering properties */
 /* Add all the models to be created here */
 void initGL (GLFWwindow* window, int width, int height)
 {
     /* Objects should be created before any other gl function and shaders */
 	// Create the models
-
-  bucket["green"].object=createRectangle ("bucket", green, 12.0f, 12.0f,150,150);
-  bucket["red"].object=createRectangle ("bucket", red, 12.0f, 12.0f,150,150);
-	createLine(-500,-180,500,-180); // Generate the VAO, VBOs, vertices data & copy into the array buffer
+  create_bucket("red");
+  create_bucket("green");
+  create_cannon();
+  createLine(-500,-180,500,-180); // Generate the VAO, VBOs, vertices data & copy into the array buffer
 
 /* No change beyond this is allowed */
 	// Create and compile our GLSL program from the shaders
