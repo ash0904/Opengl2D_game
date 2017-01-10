@@ -31,6 +31,41 @@ typedef struct COLOR {
     float b;
 } COLOR;
 
+COLOR grey = {168.0/255.0,168.0/255.0,168.0/255.0};
+COLOR gold = {218.0/255.0,165.0/255.0,32.0/255.0};
+COLOR red = {255.0/255.0,51.0/255.0,51.0/255.0};
+COLOR lightgreen = {57/255.0,230/255.0,0/255.0};
+COLOR darkgreen = {51/255.0,102/255.0,0/255.0};
+COLOR black = {30/255.0,30/255.0,21/255.0};
+COLOR blue = {0,0,1};
+COLOR green = {0.0f,1.0f,0.0f};
+COLOR darkbrown = {46/255.0,46/255.0,31/255.0};
+COLOR lightbrown = {95/255.0,63/255.0,32/255.0};
+COLOR lightpink = {255/255.0,122/255.0,173/255.0};
+COLOR darkpink = {255/255.0,51/255.0,119/255.0};
+COLOR white = {255/255.0,255/255.0,255/255.0};
+
+typedef struct Base {
+    string name;          // name of object
+    COLOR color;          // color of object
+    float x,y;            // co-odinates
+    VAO* object;          // shape of object
+    int status;           // doubt???
+    float height,width;
+    float x_speed,y_speed;
+    float radius;
+    int inAir;            // boolean 0 or 1
+    int fixed;            // boolean 0 or 1
+    int isMoving;         // boolean 0 or 1
+} Base;
+
+map <string, Base> objects;
+map <string, Base> cannonObjects; //Only store cannon components here
+map <string, Base> bricks;
+map <string, Base> mirror;
+map <string, Base> bucket;
+map <string, Base> lazer;
+
 struct GLMatrices {
 	glm::mat4 projection;
 	glm::mat4 model;
@@ -126,7 +161,7 @@ void quit(GLFWwindow *window)
 {
     glfwDestroyWindow(window);
     glfwTerminate();
-//    exit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 }
 
 
@@ -210,10 +245,6 @@ void draw3DObject (struct VAO* vao)
  * Customizable functions *
  **************************/
 
-float triangle_rot_dir = 1;
-float rectangle_rot_dir = 1;
-bool triangle_rot_status = true;
-bool rectangle_rot_status = true;
 
 /* Executed when a regular key is pressed/released/held-down */
 /* Prefered for Keyboard events */
@@ -224,10 +255,10 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
     if (action == GLFW_RELEASE) {
         switch (key) {
             case GLFW_KEY_C:
-                rectangle_rot_status = !rectangle_rot_status;
+//                rectangle_rot_status = !rectangle_rot_status;
                 break;
             case GLFW_KEY_P:
-                triangle_rot_status = !triangle_rot_status;
+//                triangle_rot_status = !triangle_rot_status;
                 break;
             case GLFW_KEY_X:
                 // do something ..
@@ -266,11 +297,11 @@ void mouseButton (GLFWwindow* window, int button, int action, int mods)
     switch (button) {
         case GLFW_MOUSE_BUTTON_LEFT:
             if (action == GLFW_RELEASE)
-                triangle_rot_dir *= -1;
+  //              triangle_rot_dir *= -1;
             break;
         case GLFW_MOUSE_BUTTON_RIGHT:
             if (action == GLFW_RELEASE) {
-                rectangle_rot_dir *= -1;
+    //            rectangle_rot_dir *= -1;
             }
             break;
         default:
@@ -301,8 +332,8 @@ void reshapeWindow (GLFWwindow* window, int width, int height)
     // Perspective projection for 3D views
     // Matrices.projection = glm::perspective (fov, (GLfloat) fbwidth / (GLfloat) fbheight, 0.1f, 500.0f);
 
-    // Ortho projection for 2D views
-    Matrices.projection = glm::ortho(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 500.0f);
+    // Ortho projection for 2D views (-x,+x,-y,+y)
+    Matrices.projection = glm::ortho(-500.0f, 500.0f, -350.0f, 350.0f, 0.1f, 500.0f);
 }
 
 VAO *triangle, *rectangle, *line;
@@ -353,33 +384,34 @@ void createTriangle ()
 
 
 // Creates the rectangle object used in this sample code
-void createRectangle ()
+VAO* createRectangle (string name, COLOR color1, float x, float y, float height, float width)
 {
   // GL3 accepts only Triangles. Quads are not supported
-  static const GLfloat vertex_buffer_data [] = {
-    -1.2,-1,0, // vertex 1
-    1.2,-1,0, // vertex 2
-    1.2, 0.5,0, // vertex 3
+  float w=width/2,h=height/2;
+  GLfloat vertex_buffer_data [] = {
+      -w,-h,0, // vertex 1
+      -w,h,0, // vertex 2
+      w,h,0, // vertex 3
 
-    1.2, 0.5,0, // vertex 3
-    -1.2, 1,0, // vertex 4
-    -1.2,-1,0  // vertex 1
-
+      w,h,0, // vertex 3
+      w,-h,0, // vertex 4
+      -w,-h,0  // vertex 1
   };
 
   static const GLfloat color_buffer_data [] = {
-    1,0,0, // color 1
-    0,0,1, // color 2
-    0,1,0, // color 3
+    color1.r,color1.g,color1.b, // color 1
+    color1.r,color1.g,color1.b, // color 2
+    color1.r,color1.g,color1.b, // color 3
 
-    0,1,0, // color 3
-    0.3,0.3,0.3, // color 4
-    1,0,0,  // color 1
+    color1.r,color1.g,color1.b, // color 3
+    color1.r,color1.g,color1.b, // color 4
+    color1.r,color1.g,color1.b,  // color 1
 
   };
 
   // create3DObject creates and returns a handle to a VAO that can be used later
-  rectangle = create3DObject(GL_TRIANGLES, 15, vertex_buffer_data, color_buffer_data, GL_FILL);
+  rectangle = create3DObject(GL_TRIANGLES, 6, vertex_buffer_data, color_buffer_data, GL_FILL);
+  return rectangle;
 }
 
 float camera_rotation_angle = 90;
@@ -393,6 +425,8 @@ void draw ()
   // clear the color and depth in the frame buffer
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+/* don't disturb anything */
   // use the loaded shader program
   // Don't change unless you know what you are doing
   glUseProgram (programID);
@@ -418,8 +452,8 @@ void draw ()
   //  Don't change unless you are sure!!
 
   glm::mat4 MVP;	// MVP = Projection * View * Model
-
-  /*my code in draw function starts here */
+/* till here */
+/*my code in draw function starts here */
 
   // Load identity to model matrix
   Matrices.model = glm::mat4(1.0f);
@@ -432,6 +466,8 @@ void draw ()
 
   // draw3DObject draws the VAO given to it using current MVP matrix
   draw3DObject(line);
+  draw3DObject(bucket["red"].object);
+  //draw3DObject(bucket["green"].object);
 
 }
 
@@ -490,9 +526,11 @@ void initGL (GLFWwindow* window, int width, int height)
     /* Objects should be created before any other gl function and shaders */
 	// Create the models
 
-	createTriangle (); // Generate the VAO, VBOs, vertices data & copy into the array buffer
-	createLine(-4,-2.5,4,-2.5);
+  bucket["green"].object=createRectangle ("bucket", green, 12.0f, 12.0f,150,150);
+  bucket["red"].object=createRectangle ("bucket", red, 12.0f, 12.0f,150,150);
+	createLine(-500,-180,500,-180); // Generate the VAO, VBOs, vertices data & copy into the array buffer
 
+/* No change beyond this is allowed */
 	// Create and compile our GLSL program from the shaders
 	programID = LoadShaders( "Sample_GL.vert", "Sample_GL.frag" );
 	// Get a handle for our "MVP" uniform
@@ -516,8 +554,8 @@ void initGL (GLFWwindow* window, int width, int height)
 
 int main (int argc, char** argv)
 {
-	int width = 1080;
-	int height = 710;
+	int width = 1000;
+	int height = 700;
 
     GLFWwindow* window = initGLFW(width, height);
 
