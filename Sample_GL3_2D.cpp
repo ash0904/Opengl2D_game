@@ -35,8 +35,9 @@ COLOR grey = {168.0/255.0,168.0/255.0,168.0/255.0};
 COLOR gold = {218.0/255.0,165.0/255.0,32.0/255.0};
 COLOR red = {255.0/255.0,51.0/255.0,51.0/255.0};
 COLOR lightgreen = {57/255.0,230/255.0,0/255.0};
+COLOR lightblue ={0/255.0, 170.0/255.0, 255/255.0};
 COLOR darkgreen = {51/255.0,102/255.0,0/255.0};
-COLOR black = {30/255.0,30/255.0,21/255.0};
+COLOR black = {0,0,0};
 COLOR blue = {0,0,1};
 COLOR green = {1.0/255.0,255.0/255.0,1.0/255.0};
 COLOR darkbrown = {46/255.0,46/255.0,31/255.0};
@@ -51,6 +52,7 @@ typedef struct Base {
     float x,y;            // co-odinates
     VAO* object;          // shape of object
     int key_press;           // doubt???
+    int status;           // for objects to be hidden initially
     float height,width;
     float x_speed,y_speed;
     float dx,dy;          // amount to be moved
@@ -62,7 +64,7 @@ typedef struct Base {
 
 map <string, Base> objects;
 map <string, Base> cannon; //Only store cannon components here
-map <string, Base> bricks;
+map <string, Base> brick;
 map <string, Base> mirror;
 map <string, Base> bucket;
 map <string, Base> lazer;
@@ -285,6 +287,9 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 bucket["green"].dx=0;
                 bucket["green"].key_press=0;
                 break;
+            case GLFW_KEY_SPACE:
+                lazer["1"].status=0;
+                break;
             case GLFW_KEY_X:
                 break;
             default:
@@ -320,6 +325,9 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
           case GLFW_KEY_DOWN:
               bucket["green"].dx=3;
               bucket["green"].key_press=1;
+              break;
+          case GLFW_KEY_SPACE:
+              lazer["1"].status=1;
               break;
           case GLFW_KEY_ESCAPE:
                 quit(window);
@@ -532,6 +540,20 @@ void draw ()
   draw3DObject(line);
 
 
+
+  if(cannon["main"].key_press==1)
+  {
+    cannon["main"].y+=cannon["main"].dy;
+    cannon["front"].y+=cannon["front"].dy;
+  }
+  if(lazer["1"].status)
+  {
+    lazer["1"].x=(cannon["main"].width+cannon["front"].width);
+    lazer["1"].y=cannon["front"].y;
+    display(lazer["1"],VP);
+  }
+  display(cannon["main"],VP);
+  display(cannon["front"],VP);
   if(bucket["red"].key_press==1 || bucket["green"].key_press==1)
   {
         bucket["red"].x+=bucket["red"].dx;;
@@ -539,13 +561,9 @@ void draw ()
   }
   display(bucket["green"],VP);
   display(bucket["red"],VP);
-  if(cannon["main"].key_press==1)
-  {
-    cannon["main"].y+=cannon["main"].dy;
-    cannon["front"].y+=cannon["front"].dy;
-  }
-  display(cannon["main"],VP);
-  display(cannon["front"],VP);
+  brick["black"].y+=brick["black"].dy;
+  display(brick["black"],VP);
+
 }
 
 /* Initialise glfw window, I/O callbacks and the renderer to use */
@@ -601,6 +619,8 @@ void create_bucket(string color)
 {
   bucket[color].height=150;
   bucket[color].width=150;
+  bucket[color].dx=0;
+  bucket[color].dy=0;
   if(color=="red")
   {
     bucket[color].object = createRectangle (red, bucket[color].height,bucket[color].width);
@@ -622,19 +642,46 @@ void create_bucket(string color)
 
 void create_cannon()
 {
+  cannon["main"].dx=0;
+  cannon["main"].dy=0;
   cannon["main"].color=blue;
   cannon["main"].width=50;
   cannon["main"].height=35;
   cannon["main"].object = createRectangle (blue, cannon["main"].height,cannon["main"].width);
   cannon["main"].x=-500+cannon["main"].width/2;
   cannon["main"].y=0;
+  cannon["front"].dx=0;
+  cannon["front"].dy=0;
   cannon["front"].color=blue;
   cannon["front"].width=35;
   cannon["front"].height=20;
   cannon["front"].object = createRectangle (blue, cannon["front"].height,cannon["front"].width);
   cannon["front"].x=-500+cannon["main"].width+cannon["front"].width/2;
   cannon["front"].y=0;
+}
+void create_bricks()
+{
+  brick["black"].color=black;
+  brick["black"].width=35;
+  brick["black"].height=50;
+  brick["black"].object = createRectangle (black, brick["black"].height,brick["black"].width);
+  brick["black"].x=0;
+  brick["black"].y=350+brick["black"].height/2;
+  brick["black"].dx=0;
+  brick["black"].dy=-1;
+}
 
+void create_lazer()
+{
+  lazer["1"].color=lightblue;
+  lazer["1"].width=1100;
+  lazer["1"].height=5;
+  lazer["1"].object = createRectangle (lightblue, lazer["1"].height,lazer["1"].width);
+  lazer["1"].x=cannon["main"].width+cannon["front"].width;
+  lazer["1"].y=cannon["front"].y;
+  lazer["1"].status=0;
+  lazer["1"].dx=0;
+  lazer["1"].dy=0;
 }
 
 /* Initialize the OpenGL rendering properties */
@@ -646,6 +693,8 @@ void initGL (GLFWwindow* window, int width, int height)
   create_bucket("red");
   create_bucket("green");
   create_cannon();
+  create_lazer();
+  create_bricks();
   createLine(-500,-180,500,-180); // Generate the VAO, VBOs, vertices data & copy into the array buffer
 
 /* No change beyond this is allowed */
