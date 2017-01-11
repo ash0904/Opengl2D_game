@@ -31,6 +31,7 @@ typedef struct COLOR {
     float b;
 } COLOR;
 
+COLOR mirror_col = {51/255.0, 204/255.0, 255/255.0};
 COLOR grey = {168.0/255.0,168.0/255.0,168.0/255.0};
 COLOR gold = {218.0/255.0,165.0/255.0,32.0/255.0};
 COLOR red = {255.0/255.0,51.0/255.0,51.0/255.0};
@@ -396,9 +397,9 @@ void reshapeWindow (GLFWwindow* window, int width, int height)
     Matrices.projection = glm::ortho(-500.0f, 500.0f, -350.0f, 350.0f, 0.1f, 500.0f);
 }
 
-VAO *triangle, *line;
+VAO *triangle;
 
-void createLine (int x1,int y1,int x2,int y2)
+VAO* createLine (COLOR color,int x1,int y1,int x2,int y2)
 {
   /* ONLY vertices between the bounds specified in glm::ortho will be visible on screen */
 
@@ -410,13 +411,13 @@ void createLine (int x1,int y1,int x2,int y2)
   };
 
   static const GLfloat color_buffer_data [] = {
-    0,0,0, // color 0
-    0,0,0, // color 1
-    0,0,0, // color 2
+    color.r,color.g,color.b, // color 0
+    color.r,color.g,color.b, // color 1
+    color.r,color.g,color.b, // color 2
   };
 
   // create3DObject creates and returns a handle to a VAO that can be used later
-  line = create3DObject(GL_TRIANGLES, 3, vertex_buffer_data, color_buffer_data, GL_LINE);
+  return create3DObject(GL_TRIANGLES, 3, vertex_buffer_data, color_buffer_data, GL_LINE);
 }
 
 
@@ -473,7 +474,6 @@ VAO* createRectangle (COLOR color1, float height, float width)
   // create3DObject creates and returns a handle to a VAO that can be used later
 
     return create3DObject(GL_TRIANGLES, 6, vertex_buffer_data, color_buffer_data, GL_FILL);
-
 }
 
 float camera_rotation_angle = 90;
@@ -487,7 +487,13 @@ void display(Base obj,glm::mat4 VP)
   MVP = VP * Matrices.model; // MVP = p * V * M
   glm::mat4 ObjectTransform;
   glm::mat4 translateObject = glm::translate (glm::vec3(obj.x,obj.y, 0.0f)); // glTranslatef
-  ObjectTransform=translateObject;
+  glm::mat4  rotateTriangle=glm::mat4(1.0f);
+  if(obj.name=="mirror1")
+  {
+   rotateTriangle = glm::rotate((float)(-45*M_PI/180.0f), glm::vec3(0,0,1));  // rotate about vector (1,0,0)
+  }
+
+  ObjectTransform=translateObject *rotateTriangle;
   Matrices.model *= ObjectTransform;
   MVP = VP * Matrices.model; // MVP = p * V * M
 
@@ -537,9 +543,7 @@ void draw ()
   Matrices.model = glm::mat4(1.0f);
   MVP = VP * Matrices.model; // MVP = p * V * M
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-  draw3DObject(line);
-
-
+  draw3DObject(objects["mainline"].object);
 
   if(cannon["main"].key_press==1)
   {
@@ -563,6 +567,7 @@ void draw ()
   display(bucket["red"],VP);
   brick["black"].y+=brick["black"].dy;
   display(brick["black"],VP);
+  display(mirror["1"],VP);
 
 }
 
@@ -582,7 +587,7 @@ GLFWwindow* initGLFW (int width, int height)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    window = glfwCreateWindow(width, height, "Brick Breaker", NULL, NULL);
+    window = glfwCreateWindow(width, height, "Brick Breaker ~harshit mahajan", NULL, NULL);
 
     if (!window) {
         glfwTerminate();
@@ -668,13 +673,13 @@ void create_bricks()
   brick["black"].x=0;
   brick["black"].y=350+brick["black"].height/2;
   brick["black"].dx=0;
-  brick["black"].dy=-1;
+  brick["black"].dy=0;
 }
 
 void create_lazer()
 {
   lazer["1"].color=lightblue;
-  lazer["1"].width=1100;
+  lazer["1"].width=1000;
   lazer["1"].height=5;
   lazer["1"].object = createRectangle (lightblue, lazer["1"].height,lazer["1"].width);
   lazer["1"].x=cannon["main"].width+cannon["front"].width;
@@ -682,6 +687,21 @@ void create_lazer()
   lazer["1"].status=0;
   lazer["1"].dx=0;
   lazer["1"].dy=0;
+}
+
+void create_mirror()
+{
+  mirror["1"].name="mirror1";
+  mirror["1"].color=mirror_col;
+  mirror["1"].width=2;
+  mirror["1"].height=100;
+  mirror["1"].object = createRectangle (mirror_col, mirror["1"].height,mirror["1"].width);
+  mirror["1"].x=400;
+  mirror["1"].y=-100;
+  mirror["1"].status=0;
+  mirror["1"].dx=0;
+  mirror["1"].dy=0;
+
 }
 
 /* Initialize the OpenGL rendering properties */
@@ -695,7 +715,8 @@ void initGL (GLFWwindow* window, int width, int height)
   create_cannon();
   create_lazer();
   create_bricks();
-  createLine(-500,-180,500,-180); // Generate the VAO, VBOs, vertices data & copy into the array buffer
+  create_mirror();
+  objects["mainline"].object=createLine(black,-500,-180,500,-180); // Generate the VAO, VBOs, vertices data & copy into the array buffer
 
 /* No change beyond this is allowed */
 	// Create and compile our GLSL program from the shaders
