@@ -55,9 +55,9 @@ typedef struct Base {
     int key_press;           // doubt???
     int status;           // for objects to be hidden initially
     float height,width;
-    float x_speed,y_speed;
+  //  float x_speed,y_speed;
     float dx,dy;          // amount to be moved
-    float radius;
+    float rot_angle;
     int inAir;            // boolean 0 or 1
     int fixed;            // boolean 0 or 1
     int isMoving;         // boolean 0 or 1
@@ -248,7 +248,7 @@ void draw3DObject (struct VAO* vao)
 /**************************
  * Customizable functions *
  **************************/
-float cannon_y_pos=0;
+float degree_per_rotation=6;
 
 /* Executed when a regular key is pressed/released/held-down */
 /* Prefered for Keyboard events */
@@ -272,6 +272,19 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 cannon["main"].key_press=0;
                 cannon["front"].key_press=0;
                 break;
+            case GLFW_KEY_A:
+                cannon["front"].key_press=1;
+                cannon["front"].rot_angle+=degree_per_rotation;
+                if(cannon["front"].rot_angle>360)
+                  cannon["front"].rot_angle-=360;
+                break;
+            case GLFW_KEY_D:
+                cannon["front"].key_press=1;
+                cannon["front"].rot_angle-=degree_per_rotation;
+                if(cannon["front"].rot_angle<0)
+                  cannon["front"].rot_angle+=360;
+                break;
+
             case GLFW_KEY_LEFT:
                 bucket["red"].dx=0;
                 bucket["red"].key_press=0;
@@ -288,6 +301,7 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 bucket["green"].dx=0;
                 bucket["green"].key_press=0;
                 break;
+
             case GLFW_KEY_SPACE:
                 lazer["1"].status=0;
                 break;
@@ -470,7 +484,6 @@ VAO* createRectangle (COLOR color1, float height, float width)
 
   };
 
-
   // create3DObject creates and returns a handle to a VAO that can be used later
 
     return create3DObject(GL_TRIANGLES, 6, vertex_buffer_data, color_buffer_data, GL_FILL);
@@ -490,7 +503,12 @@ void display(Base obj,glm::mat4 VP)
   glm::mat4  rotateTriangle=glm::mat4(1.0f);
   if(obj.name=="mirror1")
   {
-   rotateTriangle = glm::rotate((float)(-45*M_PI/180.0f), glm::vec3(0,0,1));  // rotate about vector (1,0,0)
+   rotateTriangle = glm::rotate((float)(obj.rot_angle*M_PI/180.0f), glm::vec3(0,0,1));  // rotate about vector (1,0,0)
+  }
+  if(obj.name=="gun" || obj.name=="lazer")
+  {
+    //std::cout << "rotating gun "<<obj.rot_angle << '\n';
+    rotateTriangle = glm::rotate((float)(cannon["front"].rot_angle*M_PI/180.0f), glm::vec3(0,0,1));
   }
 
   ObjectTransform=translateObject *rotateTriangle;
@@ -546,23 +564,32 @@ void draw ()
   draw3DObject(objects["mainline"].object);
 
   if(cannon["main"].key_press==1)
-  {
-    cannon["main"].y+=cannon["main"].dy;
-    cannon["front"].y+=cannon["front"].dy;
+    if((cannon["main"].y<(350-cannon["main"].width/2-1) && cannon["main"].dy>0) ||
+     (cannon["main"].y>(-180+cannon["main"].width/2+1) && cannon["main"].dy<0))
+  {  cannon["main"].y+=cannon["main"].dy;
+    cannon["front"].y+=cannon["main"].dy;
   }
   if(lazer["1"].status)
   {
-    lazer["1"].x=(cannon["main"].width+cannon["front"].width);
+    lazer["1"].x=0;
     lazer["1"].y=cannon["front"].y;
     display(lazer["1"],VP);
   }
   display(cannon["main"],VP);
   display(cannon["front"],VP);
-  if(bucket["red"].key_press==1 || bucket["green"].key_press==1)
+  //if(bucket["red"].key_press==1 || bucket["green"].key_press==1)
+  if((bucket["red"].x<(500-bucket["red"].width/2-6) && bucket["red"].dx>0) ||
+   (bucket["red"].x>(-500+bucket["red"].width/2+3) && bucket["red"].dx<0))
   {
         bucket["red"].x+=bucket["red"].dx;;
-        bucket["green"].x+=bucket["green"].dx;;
   }
+
+  if((bucket["green"].x<(500-bucket["green"].width/2-6) && bucket["green"].dx>0) ||
+   (bucket["green"].x>(-500+bucket["green"].width/2+4) && bucket["green"].dx<0))
+   {
+     bucket["green"].x+=bucket["green"].dx;;
+
+   }
   display(bucket["green"],VP);
   display(bucket["red"],VP);
   brick["black"].y+=brick["black"].dy;
@@ -647,6 +674,7 @@ void create_bucket(string color)
 
 void create_cannon()
 {
+  cannon["main"].name="base";
   cannon["main"].dx=0;
   cannon["main"].dy=0;
   cannon["main"].color=blue;
@@ -655,11 +683,13 @@ void create_cannon()
   cannon["main"].object = createRectangle (blue, cannon["main"].height,cannon["main"].width);
   cannon["main"].x=-500+cannon["main"].width/2;
   cannon["main"].y=0;
+  cannon["front"].name="gun";
   cannon["front"].dx=0;
   cannon["front"].dy=0;
   cannon["front"].color=blue;
   cannon["front"].width=35;
   cannon["front"].height=20;
+  cannon["front"].rot_angle=0;
   cannon["front"].object = createRectangle (blue, cannon["front"].height,cannon["front"].width);
   cannon["front"].x=-500+cannon["main"].width+cannon["front"].width/2;
   cannon["front"].y=0;
@@ -678,6 +708,7 @@ void create_bricks()
 
 void create_lazer()
 {
+  lazer["1"].name="lazer";
   lazer["1"].color=lightblue;
   lazer["1"].width=1000;
   lazer["1"].height=5;
@@ -693,8 +724,9 @@ void create_mirror()
 {
   mirror["1"].name="mirror1";
   mirror["1"].color=mirror_col;
-  mirror["1"].width=2;
+  mirror["1"].width=3;
   mirror["1"].height=100;
+  mirror["1"].rot_angle=-45;
   mirror["1"].object = createRectangle (mirror_col, mirror["1"].height,mirror["1"].width);
   mirror["1"].x=400;
   mirror["1"].y=-100;
