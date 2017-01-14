@@ -615,7 +615,7 @@ void draw (){
 
   }
 
-  for (int i = 0; i < 9; i++)
+  for (int i = 9; i < 14; i++)
   {
     brick[i].y+=brick_speed;
     display(brick[i],VP);
@@ -808,6 +808,18 @@ void initGL (GLFWwindow* window, int width, int height)
     create_bricks(black,i+4,100+i*60);
     if(i<4)
       create_bricks(black,i,-120-i*60);
+  }
+  for (int i = 9; i < 14; i++)
+  {
+    create_bricks(red,i+4,100+i*60);
+    if(i<4)
+      create_bricks(red,i,-120-i*60);
+  }
+  for (int i = 9; i < 14; i++)
+  {
+    create_bricks(green,i+4,100+i*60);
+    if(i<4)
+      create_bricks(green,i,-120-i*60);
   }
   objects["mainline"].object=createLine(black,-500,partition,500,partition); // Generate the VAO, VBOs, vertices data & copy into the array buffer
 
