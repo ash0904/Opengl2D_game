@@ -65,7 +65,7 @@ typedef struct Base {
 
 map <string, Base> objects;
 map <string, Base> cannon; //Only store cannon components here
-map <string, Base> brick;
+map <int, Base> brick;
 map <string, Base> mirror;
 map <string, Base> bucket;
 map <string, Base> lazer;
@@ -248,7 +248,7 @@ void draw3DObject (struct VAO* vao)
 /**************************
  * Customizable functions *
  **************************/
-float degree_per_rotation=6;
+float degree_per_rotation=3,brick_speed=-2,partition=-190;
 
 /* Executed when a regular key is pressed/released/held-down */
 /* Prefered for Keyboard events */
@@ -274,15 +274,13 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 break;
             case GLFW_KEY_A:
                 cannon["front"].key_press=1;
-                cannon["front"].rot_angle+=degree_per_rotation;
-                if(cannon["front"].rot_angle>360)
-                  cannon["front"].rot_angle-=360;
+                if(cannon["front"].rot_angle+degree_per_rotation<94)
+                  cannon["front"].rot_angle+=degree_per_rotation;
                 break;
             case GLFW_KEY_D:
                 cannon["front"].key_press=1;
-                cannon["front"].rot_angle-=degree_per_rotation;
-                if(cannon["front"].rot_angle<0)
-                  cannon["front"].rot_angle+=360;
+                if(cannon["front"].rot_angle-degree_per_rotation>-94)
+                  cannon["front"].rot_angle-=degree_per_rotation;
                 break;
 
             case GLFW_KEY_LEFT:
@@ -303,7 +301,9 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 break;
 
             case GLFW_KEY_SPACE:
-                lazer["1"].status=0;
+                lazer["1"].status=1;
+                lazer["1"].rot_angle=cannon["front"].rot_angle;
+                lazer["1"].y=cannon["front"].y;
                 break;
             case GLFW_KEY_X:
                 break;
@@ -342,7 +342,6 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
               bucket["green"].key_press=1;
               break;
           case GLFW_KEY_SPACE:
-              lazer["1"].status=1;
               break;
           case GLFW_KEY_ESCAPE:
                 quit(window);
@@ -418,13 +417,13 @@ VAO* createLine (COLOR color,int x1,int y1,int x2,int y2)
   /* ONLY vertices between the bounds specified in glm::ortho will be visible on screen */
 
   /* Define vertex array as used in glBegin (GL_TRIANGLES) */
-  static const GLfloat vertex_buffer_data [] = {
+   GLfloat vertex_buffer_data [] = {
     x1, y2,0, // vertex 0
     (x1+x2)/2,(y1+y2)/2,0, // vertex 1
     x2,y2,0, // vertex 2
   };
 
-  static const GLfloat color_buffer_data [] = {
+   GLfloat color_buffer_data [] = {
     color.r,color.g,color.b, // color 0
     color.r,color.g,color.b, // color 1
     color.r,color.g,color.b, // color 2
@@ -493,25 +492,42 @@ float camera_rotation_angle = 90;
 float rectangle_rotation = 0;
 float triangle_rotation = 0;
 
+void create_bricks(COLOR color1,int no,float x_co)
+{
+  brick[no].color=color1;
+  brick[no].width=25;
+  brick[no].height=50;
+  brick[no].object = createRectangle (color1, brick[no].height,brick[no].width);
+  brick[no].x=x_co;//-380
+  brick[no].y=350+brick[no].height/2;
+  brick[no].dx=0;
+  brick[no].dy=0;
+}
+
 void display(Base obj,glm::mat4 VP)
 {
   glm::mat4 MVP;
   Matrices.model = glm::mat4(1.0f);
-  MVP = VP * Matrices.model; // MVP = p * V * M
+  //MVP = VP * Matrices.model; // MVP = p * V * M
   glm::mat4 ObjectTransform;
   glm::mat4 translateObject = glm::translate (glm::vec3(obj.x,obj.y, 0.0f)); // glTranslatef
   glm::mat4  rotateTriangle=glm::mat4(1.0f);
-  if(obj.name=="mirror1")
+  if(obj.name=="mirror1" || obj.name=="mirror2" || obj.name=="mirror3" || obj.name=="mirror4")
   {
    rotateTriangle = glm::rotate((float)(obj.rot_angle*M_PI/180.0f), glm::vec3(0,0,1));  // rotate about vector (1,0,0)
   }
-  if(obj.name=="gun" || obj.name=="lazer")
+  if(obj.name=="gun")
   {
-    //std::cout << "rotating gun "<<obj.rot_angle << '\n';
     rotateTriangle = glm::rotate((float)(cannon["front"].rot_angle*M_PI/180.0f), glm::vec3(0,0,1));
   }
-
   ObjectTransform=translateObject *rotateTriangle;
+  if(obj.name=="lazer")
+  {
+    translateObject = glm::translate (glm::vec3(obj.x,obj.y, 0.0f)); // glTranslatef
+    rotateTriangle = glm::rotate((float)(lazer["1"].rot_angle*M_PI/180.0f), glm::vec3(0,0,1));
+    ObjectTransform=translateObject * rotateTriangle;
+  }
+
   Matrices.model *= ObjectTransform;
   MVP = VP * Matrices.model; // MVP = p * V * M
 
@@ -519,9 +535,9 @@ void display(Base obj,glm::mat4 VP)
   draw3DObject(obj.object);
 }
 
+int flag=1;
 /* Edit this function according to your assignment */
-void draw ()
-{
+void draw (){
   // clear the color and depth in the frame buffer
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -563,38 +579,53 @@ void draw ()
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
   draw3DObject(objects["mainline"].object);
 
-  if(cannon["main"].key_press==1)
-    if((cannon["main"].y<(350-cannon["main"].width/2-1) && cannon["main"].dy>0) ||
-     (cannon["main"].y>(-180+cannon["main"].width/2+1) && cannon["main"].dy<0))
+  if((cannon["main"].y<(350-cannon["main"].width/2-1) && cannon["main"].dy>0) ||
+     (cannon["main"].y>(-190+cannon["main"].width/2+1) && cannon["main"].dy<0))
   {  cannon["main"].y+=cannon["main"].dy;
     cannon["front"].y+=cannon["main"].dy;
   }
+  float speed=20;
   if(lazer["1"].status)
   {
-    lazer["1"].x=0;
-    lazer["1"].y=cannon["front"].y;
+    lazer["1"].dx=speed*cos(lazer["1"].rot_angle*M_PI/180);
+    lazer["1"].dy=speed*sin(lazer["1"].rot_angle*M_PI/180);
+    lazer["1"].x+=lazer["1"].dx;
+    lazer["1"].y+=lazer["1"].dy;
     display(lazer["1"],VP);
+    if(lazer["1"].x-lazer["1"].width>500 || lazer["1"].y-lazer["1"].height>350)
+        {
+          lazer["1"].status=0;
+          lazer["1"].x=cannon["front"].x;
+          lazer["1"].y=cannon["front"].y;
+        }
   }
   display(cannon["main"],VP);
   display(cannon["front"],VP);
   //if(bucket["red"].key_press==1 || bucket["green"].key_press==1)
   if((bucket["red"].x<(500-bucket["red"].width/2-6) && bucket["red"].dx>0) ||
-   (bucket["red"].x>(-500+bucket["red"].width/2+3) && bucket["red"].dx<0))
+  (bucket["red"].x>(-500+bucket["red"].width/2+3) && bucket["red"].dx<0))
   {
-        bucket["red"].x+=bucket["red"].dx;;
+    bucket["red"].x+=bucket["red"].dx;;
   }
 
   if((bucket["green"].x<(500-bucket["green"].width/2-6) && bucket["green"].dx>0) ||
-   (bucket["green"].x>(-500+bucket["green"].width/2+4) && bucket["green"].dx<0))
-   {
-     bucket["green"].x+=bucket["green"].dx;;
+  (bucket["green"].x>(-500+bucket["green"].width/2+4) && bucket["green"].dx<0))
+  {
+    bucket["green"].x+=bucket["green"].dx;;
 
-   }
+  }
+
+  for (int i = 0; i < 9; i++)
+  {
+    brick[i].y+=brick_speed;
+    display(brick[i],VP);
+  }
+  display(mirror["1"],VP);
+  display(mirror["2"],VP);
+  display(mirror["3"],VP);
+  display(mirror["4"],VP);
   display(bucket["green"],VP);
   display(bucket["red"],VP);
-  brick["black"].y+=brick["black"].dy;
-  display(brick["black"],VP);
-  display(mirror["1"],VP);
 
 }
 
@@ -694,29 +725,18 @@ void create_cannon()
   cannon["front"].x=-500+cannon["main"].width+cannon["front"].width/2;
   cannon["front"].y=0;
 }
-void create_bricks()
-{
-  brick["black"].color=black;
-  brick["black"].width=35;
-  brick["black"].height=50;
-  brick["black"].object = createRectangle (black, brick["black"].height,brick["black"].width);
-  brick["black"].x=0;
-  brick["black"].y=350+brick["black"].height/2;
-  brick["black"].dx=0;
-  brick["black"].dy=0;
-}
 
 void create_lazer()
 {
   lazer["1"].name="lazer";
   lazer["1"].color=lightblue;
-  lazer["1"].width=1000;
+  lazer["1"].width=100;
   lazer["1"].height=5;
   lazer["1"].object = createRectangle (lightblue, lazer["1"].height,lazer["1"].width);
-  lazer["1"].x=cannon["main"].width+cannon["front"].width;
+  lazer["1"].x=-500+cannon["main"].width+cannon["front"].width;
   lazer["1"].y=cannon["front"].y;
   lazer["1"].status=0;
-  lazer["1"].dx=0;
+  lazer["1"].dx=20;
   lazer["1"].dy=0;
 }
 
@@ -728,11 +748,47 @@ void create_mirror()
   mirror["1"].height=100;
   mirror["1"].rot_angle=-45;
   mirror["1"].object = createRectangle (mirror_col, mirror["1"].height,mirror["1"].width);
-  mirror["1"].x=400;
-  mirror["1"].y=-100;
+  mirror["1"].x=420;
+  mirror["1"].y=-130;
   mirror["1"].status=0;
   mirror["1"].dx=0;
   mirror["1"].dy=0;
+
+  mirror["2"].name="mirror2";
+  mirror["2"].color=mirror_col;
+  mirror["2"].width=3;
+  mirror["2"].height=100;
+  mirror["2"].rot_angle=45;
+  mirror["2"].object = createRectangle (mirror_col, mirror["2"].height,mirror["2"].width);
+  mirror["2"].x=420;
+  mirror["2"].y=200;
+  mirror["2"].status=0;
+  mirror["2"].dx=0;
+  mirror["2"].dy=0;
+
+  mirror["3"].name="mirror3";
+  mirror["3"].color=mirror_col;
+  mirror["3"].width=3.5;
+  mirror["3"].height=100;
+  mirror["3"].rot_angle=60;
+  mirror["3"].object = createRectangle (mirror_col, mirror["3"].height,mirror["3"].width);
+  mirror["3"].x=0;
+  mirror["3"].y=300;
+  mirror["3"].status=0;
+  mirror["3"].dx=0;
+  mirror["3"].dy=0;
+
+  mirror["4"].name="mirror4";
+  mirror["4"].color=mirror_col;
+  mirror["4"].width=3.5;
+  mirror["4"].height=100;
+  mirror["4"].rot_angle=-25;
+  mirror["4"].object = createRectangle (mirror_col, mirror["4"].height,mirror["4"].width);
+  mirror["4"].x=0;
+  mirror["4"].y=-10;
+  mirror["4"].status=0;
+  mirror["4"].dx=0;
+  mirror["4"].dy=0;
 
 }
 
@@ -746,9 +802,14 @@ void initGL (GLFWwindow* window, int width, int height)
   create_bucket("green");
   create_cannon();
   create_lazer();
-  create_bricks();
   create_mirror();
-  objects["mainline"].object=createLine(black,-500,-180,500,-180); // Generate the VAO, VBOs, vertices data & copy into the array buffer
+  for (int i = 0; i < 5; i++)
+  {
+    create_bricks(black,i+4,100+i*60);
+    if(i<4)
+      create_bricks(black,i,-120-i*60);
+  }
+  objects["mainline"].object=createLine(black,-500,partition,500,partition); // Generate the VAO, VBOs, vertices data & copy into the array buffer
 
 /* No change beyond this is allowed */
 	// Create and compile our GLSL program from the shaders
