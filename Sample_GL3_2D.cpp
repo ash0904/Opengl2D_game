@@ -58,7 +58,7 @@ COLOR lightpink = {255/255.0,122/255.0,173/255.0};
 COLOR darkpink = {255/255.0,51/255.0,119/255.0};
 COLOR white = {255/255.0,255/255.0,255/255.0};
 
-typedef struct Base {
+typedef struct Sprite {
     string name;          // name of object
     COLOR color;          // color of object
     float x,y;            // co-odinates
@@ -72,14 +72,14 @@ typedef struct Base {
     int inAir;            // boolean 0 or 1
     int fixed;            // boolean 0 or 1
     int isMoving;         // boolean 0 or 1
-} Base;
+} Sprite;
 
-map <string, Base> objects;
-map <string, Base> cannon; //Only store cannon components here
-map <int, Base> brick;
-map <string, Base> mirror;
-map <string, Base> bucket;
-map <string, Base> lazer;
+map <string, Sprite> objects;
+map <string, Sprite> cannon; //Only store cannon components here
+map <int, Sprite> brick;
+map <string, Sprite> mirror;
+map <string, Sprite> bucket;
+map <int, Sprite> lazer;
 
 struct GLMatrices {
 	glm::mat4 projection;
@@ -259,10 +259,11 @@ void draw3DObject (struct VAO* vao)
 /**************************
  * Customizable functions *
  **************************/
+ void create_lazer(int no);
 float degree_per_rotation=1,brick_speed=-2,partition=-190,lazer_speed=20,bucket_speed=10;
-double time_diff=0, current_time,old_time;
+double time_diff=0, current_time,old_time,laz_time,laz_old_time;
 COLOR col[3]={black,red,green};
-long long score=0;
+long long score=0,laz_no=0;
 
 /* Executed when a regular key is pressed/released/held-down */
 /* Prefered for Keyboard events */
@@ -310,9 +311,12 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 break;
 
             case GLFW_KEY_SPACE:
-                lazer["1"].status=1;
-                lazer["1"].rot_angle=cannon["front"].rot_angle;
-                lazer["1"].y=cannon["front"].y;
+                if(current_time-laz_old_time>1)
+                {
+                  create_lazer(laz_no/2);
+                  laz_no++;
+                  laz_old_time=current_time;
+                }
                 break;
             case GLFW_KEY_X:
                 break;
@@ -326,13 +330,11 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
               cannon["main"].dy=3;
               cannon["front"].dy=3;
               cannon["main"].key_press=1;
-              cannon["front"].key_press=1;
               break;
           case GLFW_KEY_F:
               cannon["main"].dy=-3;
               cannon["front"].dy=-3;
               cannon["main"].key_press=1;
-              cannon["front"].key_press=1;
               break;
           case GLFW_KEY_LEFT:
               bucket["red"].dx=-1*bucket_speed;
@@ -506,7 +508,13 @@ VAO* createRectangle (COLOR color1, float height, float width)
 float camera_rotation_angle = 90;
 float rectangle_rotation = 0;
 float triangle_rotation = 0;
-
+void reset_brick(int i)
+{
+  brick[i].status=0;
+  brick[i].y=350+brick[i].height/2;
+  brick[i].dx=0;
+  brick[i].dy=0;
+}
 void create_bricks(COLOR color1,int no,float x_co)
 {
   brick[no].color=color1;
@@ -520,7 +528,7 @@ void create_bricks(COLOR color1,int no,float x_co)
   brick[no].status=0;
 }
 
-void display(Base obj,glm::mat4 VP)
+void display(Sprite obj,glm::mat4 VP)
 {
   glm::mat4 MVP;
   Matrices.model = glm::mat4(1.0f);
@@ -540,7 +548,7 @@ void display(Base obj,glm::mat4 VP)
   if(obj.name=="lazer")
   {
     translateObject = glm::translate (glm::vec3(obj.x,obj.y, 0.0f)); // glTranslatef
-    rotateTriangle = glm::rotate((float)(lazer["1"].rot_angle*M_PI/180.0f), glm::vec3(0,0,1));
+    rotateTriangle = glm::rotate((float)(obj.rot_angle*M_PI/180.0f), glm::vec3(0,0,1));
     ObjectTransform=translateObject * rotateTriangle;
   }
 
@@ -553,7 +561,7 @@ void display(Base obj,glm::mat4 VP)
 
 int flag=1;
 int i=10,arr[101]={0},it=0;
-void display_brick()
+void display_brick(glm::mat4 VP)
 {
   int rand1;
   current_time=glfwGetTime();
@@ -561,16 +569,11 @@ void display_brick()
   {
     rand1=rand()%100;
     if(brick[rand1].status==0)
-    {
       brick[rand1].status=1;
-
-    }
     old_time=current_time;
   }
-
     for(int k=0; k<100 ; k++)
     {
-
       if(brick[k].status==1)
       {
         display(brick[k],VP);
@@ -578,31 +581,59 @@ void display_brick()
           brick[k].y+=brick_speed;
         else
         {
-          brick[k].y=350+brick[k].height/2;
-          brick[k].status=0;
+          reset_brick(k);
           if(match_color(brick[k].color,red))
-          {
             if(brick[k].x>bucket["red"].x-bucket["red"].width/2 && brick[k].x<bucket["red"].x+bucket["red"].width/2)
-            {
               score+=2;
-            }
-          }
-
           if(match_color(brick[k].color,green))
-          {
             if(brick[k].x>bucket["green"].x-bucket["green"].width/2 && brick[k].x<bucket["green"].x+bucket["green"].width/2)
-            {
               score+=2;
-            }
-          }
-          cout<<score<<endl;
+          if(match_color(brick[k].color,black))
+            score-=2;
         }
       }
     }
-
-
 }
 /* Edit this function according to your assignment */
+long long st1=0,st2=0;
+void detect_collision()
+{
+  long long li,bi;
+  float temp=glfwGetTime();
+  float dis,dis1,dis2;
+  //if(current_time-temp>5)
+  //st1++;
+
+  for(li=st1;li<laz_no;li++)
+  {
+    Sprite lobj=lazer[li],bobj;
+    if(lobj.status==1)
+      for(bi=0;bi<100;bi++)
+      {
+        bobj=brick[bi];
+        if(bobj.status==1)
+        {
+          dis=sqrt((lobj.x-bobj.x)*(lobj.x-bobj.x) +(lobj.y-bobj.y)*(lobj.y-bobj.y));
+          dis1=lobj.width*abs(cos(lobj.rot_angle*M_PI/180)/2) + bobj.width/2;
+          dis2=lobj.height*abs(sin(lobj.rot_angle*M_PI/180)/2) + bobj.height/2;
+          //cout<<dis<<" "<<dis1<<" "<<dis2<<endl;
+          if(dis<dis1 || dis<dis2)
+          {
+            if(match_color(bobj.color,black))
+              score+=4;
+            if(match_color(bobj.color,red) || match_color(bobj.color,green))
+              score-=2;
+
+            cout<<"collision\n";
+            lazer[li].status=0;
+            reset_brick(bi);
+          }
+        }
+      }
+  }
+}
+
+
 void draw (){
   // clear the color and depth in the frame buffer
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -645,30 +676,31 @@ void draw (){
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
   draw3DObject(objects["mainline"].object);
 
+  detect_collision();
   if((cannon["main"].y<(350-cannon["main"].width/2-1) && cannon["main"].dy>0) ||
      (cannon["main"].y>(-190+cannon["main"].width/2+1) && cannon["main"].dy<0))
-  {  cannon["main"].y+=cannon["main"].dy;
+  { cannon["main"].y+=cannon["main"].dy;
     cannon["front"].y+=cannon["main"].dy;
   }
-  if(lazer["1"].status)
+  for(int i=0;i<laz_no;i++)
+  if(lazer[i].status)
   {
-    lazer["1"].dx=lazer_speed*cos(lazer["1"].rot_angle*M_PI/180);
-    lazer["1"].dy=lazer_speed*sin(lazer["1"].rot_angle*M_PI/180);
-    lazer["1"].x+=lazer["1"].dx;
-    lazer["1"].y+=lazer["1"].dy;
-    display(lazer["1"],VP);
-    if(lazer["1"].x-lazer["1"].width>500 || lazer["1"].y-lazer["1"].height>350)
+    lazer[i].dx=lazer_speed*cos(lazer[i].rot_angle*M_PI/180);
+    lazer[i].dy=lazer_speed*sin(lazer[i].rot_angle*M_PI/180);
+    lazer[i].x+=lazer[i].dx;
+    lazer[i].y+=lazer[i].dy;
+    display(lazer[i],VP);
+    if(lazer[i].x-lazer[i].width>500 || lazer[i].y-lazer[i].height>350 )
+  //   ||  lazer[i].x-lazer[i].width<-500 || lazer[i].y-lazer[i].height<-350)
         {
-          lazer["1"].status=0;
-          lazer["1"].x=cannon["front"].x;
-          lazer["1"].y=cannon["front"].y;
+          lazer[i].status=0;
         }
   }
   if(cannon["front"].key_press)
   {
-    if(cannon["front"].key_press==1 && cannon["front"].rot_angle+degree_per_rotation<94)
+    if(cannon["front"].key_press==1 && cannon["front"].rot_angle+degree_per_rotation<89)
       cannon["front"].rot_angle+=degree_per_rotation;
-    if(cannon["front"].key_press==2 && cannon["front"].rot_angle-degree_per_rotation>-94)
+    if(cannon["front"].key_press==2 && cannon["front"].rot_angle-degree_per_rotation>-89)
       cannon["front"].rot_angle-=degree_per_rotation;
 
   }
@@ -687,13 +719,14 @@ void draw (){
     bucket["green"].x+=bucket["green"].dx;;
 
   }
-  display_brick();
+  display_brick(VP);
   display(mirror["1"],VP);
   display(mirror["3"],VP);
   display(mirror["2"],VP);
   display(mirror["4"],VP);
   display(bucket["green"],VP);
   display(bucket["red"],VP);
+  cout<<score<<endl;
 
 }
 
@@ -794,18 +827,19 @@ void create_cannon()
   cannon["front"].y=0;
 }
 
-void create_lazer()
+void create_lazer(int no)
 {
-  lazer["1"].name="lazer";
-  lazer["1"].color=lightblue;
-  lazer["1"].width=100;
-  lazer["1"].height=5;
-  lazer["1"].object = createRectangle (lightblue, lazer["1"].height,lazer["1"].width);
-  lazer["1"].x=-500+cannon["main"].width+cannon["front"].width;
-  lazer["1"].y=cannon["front"].y;
-  lazer["1"].status=0;
-  lazer["1"].dx=20;
-  lazer["1"].dy=0;
+  lazer[no].name="lazer";
+  lazer[no].color=lightblue;
+  lazer[no].width=100;
+  lazer[no].height=5;
+  lazer[no].object = createRectangle (lightblue, lazer[no].height,lazer[no].width);
+  lazer[no].x=-500+cannon["main"].width+cannon["front"].width;
+  lazer[no].y=cannon["front"].y;
+  lazer[no].rot_angle=cannon["front"].rot_angle;
+  lazer[no].status=1;
+  lazer[no].dx=0;
+  lazer[no].dy=0;
 }
 
 void brick_initializer()
@@ -888,7 +922,6 @@ void initGL (GLFWwindow* window, int width, int height)
   create_bucket("red");
   create_bucket("green");
   create_cannon();
-  create_lazer();
   create_mirror();
   brick_initializer();
 
@@ -929,7 +962,7 @@ int main (int argc, char** argv)
 
     double last_update_time = glfwGetTime();
     old_time=last_update_time;
-
+    laz_old_time=last_update_time-0.5;
     /* Draw in loop */
     while (!glfwWindowShouldClose(window)) {
 
