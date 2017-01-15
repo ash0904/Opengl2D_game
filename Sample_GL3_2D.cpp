@@ -3,6 +3,7 @@
 #include <fstream>
 #include <vector>
 #include <map>
+#include <time.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -30,6 +31,16 @@ typedef struct COLOR {
     float g;
     float b;
 } COLOR;
+int match_color(COLOR c1,COLOR c2)
+{
+  if(abs(c1.r-c2.r)<0.00001 &&
+      abs(c1.g-c2.g)<0.00001 &&
+        abs(c1.b-c2.b)<0.00001)
+        return 1;
+    else
+    return 0;
+
+}
 
 COLOR mirror_col = {51/255.0, 204/255.0, 255/255.0};
 COLOR grey = {168.0/255.0,168.0/255.0,168.0/255.0};
@@ -248,7 +259,10 @@ void draw3DObject (struct VAO* vao)
 /**************************
  * Customizable functions *
  **************************/
-float degree_per_rotation=3,brick_speed=-2,partition=-190;
+float degree_per_rotation=1,brick_speed=-2,partition=-190,lazer_speed=20,bucket_speed=10;
+double time_diff=0, current_time,old_time;
+COLOR col[3]={black,red,green};
+long long score=0;
 
 /* Executed when a regular key is pressed/released/held-down */
 /* Prefered for Keyboard events */
@@ -273,16 +287,11 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 cannon["front"].key_press=0;
                 break;
             case GLFW_KEY_A:
-                cannon["front"].key_press=1;
-                if(cannon["front"].rot_angle+degree_per_rotation<94)
-                  cannon["front"].rot_angle+=degree_per_rotation;
+                cannon["front"].key_press=0;
                 break;
             case GLFW_KEY_D:
-                cannon["front"].key_press=1;
-                if(cannon["front"].rot_angle-degree_per_rotation>-94)
-                  cannon["front"].rot_angle-=degree_per_rotation;
+                cannon["front"].key_press=0;
                 break;
-
             case GLFW_KEY_LEFT:
                 bucket["red"].dx=0;
                 bucket["red"].key_press=0;
@@ -326,20 +335,26 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
               cannon["front"].key_press=1;
               break;
           case GLFW_KEY_LEFT:
-              bucket["red"].dx=-3;
+              bucket["red"].dx=-1*bucket_speed;
               bucket["red"].key_press=1;
               break;
           case GLFW_KEY_RIGHT:
-              bucket["red"].dx=3;
+              bucket["red"].dx=bucket_speed;
               bucket["red"].key_press=1;
               break;
           case GLFW_KEY_UP:
-              bucket["green"].dx=-3;
+              bucket["green"].dx=-1*bucket_speed;
               bucket["green"].key_press=1;
               break;
           case GLFW_KEY_DOWN:
-              bucket["green"].dx=3;
+              bucket["green"].dx=bucket_speed;
               bucket["green"].key_press=1;
+              break;
+          case GLFW_KEY_A:
+              cannon["front"].key_press=1;
+              break;
+          case GLFW_KEY_D:
+              cannon["front"].key_press=2;
               break;
           case GLFW_KEY_SPACE:
               break;
@@ -502,6 +517,7 @@ void create_bricks(COLOR color1,int no,float x_co)
   brick[no].y=350+brick[no].height/2;
   brick[no].dx=0;
   brick[no].dy=0;
+  brick[no].status=0;
 }
 
 void display(Base obj,glm::mat4 VP)
@@ -536,6 +552,7 @@ void display(Base obj,glm::mat4 VP)
 }
 
 int flag=1;
+int i=10,arr[101]={0},it=0;
 /* Edit this function according to your assignment */
 void draw (){
   // clear the color and depth in the frame buffer
@@ -584,11 +601,10 @@ void draw (){
   {  cannon["main"].y+=cannon["main"].dy;
     cannon["front"].y+=cannon["main"].dy;
   }
-  float speed=20;
   if(lazer["1"].status)
   {
-    lazer["1"].dx=speed*cos(lazer["1"].rot_angle*M_PI/180);
-    lazer["1"].dy=speed*sin(lazer["1"].rot_angle*M_PI/180);
+    lazer["1"].dx=lazer_speed*cos(lazer["1"].rot_angle*M_PI/180);
+    lazer["1"].dy=lazer_speed*sin(lazer["1"].rot_angle*M_PI/180);
     lazer["1"].x+=lazer["1"].dx;
     lazer["1"].y+=lazer["1"].dy;
     display(lazer["1"],VP);
@@ -598,6 +614,14 @@ void draw (){
           lazer["1"].x=cannon["front"].x;
           lazer["1"].y=cannon["front"].y;
         }
+  }
+  if(cannon["front"].key_press)
+  {
+    if(cannon["front"].key_press==1 && cannon["front"].rot_angle+degree_per_rotation<94)
+      cannon["front"].rot_angle+=degree_per_rotation;
+    if(cannon["front"].key_press==2 && cannon["front"].rot_angle-degree_per_rotation>-94)
+      cannon["front"].rot_angle-=degree_per_rotation;
+
   }
   display(cannon["main"],VP);
   display(cannon["front"],VP);
@@ -615,14 +639,53 @@ void draw (){
 
   }
 
-  for (int i = 9; i < 14; i++)
+int rand1;
+current_time=glfwGetTime();
+if(current_time-old_time>1)
+{
+  rand1=rand()%100;
+  if(brick[rand1].status==0)
   {
-    brick[i].y+=brick_speed;
-    display(brick[i],VP);
+    brick[rand1].status=1;
+
+  }
+  old_time=current_time;
+}
+
+  for(int k=0; k<100 ; k++)
+  {
+
+    if(brick[k].status==1)
+    {
+      display(brick[k],VP);
+      if(brick[k].y>partition+brick[k].height/2)
+        brick[k].y+=brick_speed;
+      else
+      {
+        brick[k].y=350+brick[k].height/2;
+        brick[k].status=0;
+        if(match_color(brick[k].color,red))
+        {
+          if(brick[k].x>bucket["red"].x-bucket["red"].width/2 && brick[k].x<bucket["red"].x+bucket["red"].width/2)
+          {
+            score+=2;
+          }
+        }
+
+        if(match_color(brick[k].color,green))
+        {
+          if(brick[k].x>bucket["green"].x-bucket["green"].width/2 && brick[k].x<bucket["green"].x+bucket["green"].width/2)
+          {
+            score+=2;
+          }
+        }
+        cout<<score<<endl;
+      }
+    }
   }
   display(mirror["1"],VP);
-  display(mirror["2"],VP);
   display(mirror["3"],VP);
+  display(mirror["2"],VP);
   display(mirror["4"],VP);
   display(bucket["green"],VP);
   display(bucket["red"],VP);
@@ -740,13 +803,32 @@ void create_lazer()
   lazer["1"].dy=0;
 }
 
+void brick_initializer()
+{
+  COLOR c1;
+  int j,temp,r1,r2,brick_col[10];
+  for (int i = 0; i < 5; i++)
+  {
+    brick_col[i+4]=100+i*60;
+    if(i<4)
+      brick_col[i]=-300+i*60;
+  }
+  for (int i = 0; i < 100; i++)
+  {
+    r1=rand()%9;
+    r2=rand()%3;
+    //cout<<r1<<r2<<endl;
+      create_bricks(col[r2],i,brick_col[r1]);
+  }
+}
+
 void create_mirror()
 {
   mirror["1"].name="mirror1";
   mirror["1"].color=mirror_col;
-  mirror["1"].width=3;
-  mirror["1"].height=100;
-  mirror["1"].rot_angle=-45;
+  mirror["1"].width=100;
+  mirror["1"].height=3;
+  mirror["1"].rot_angle=45;
   mirror["1"].object = createRectangle (mirror_col, mirror["1"].height,mirror["1"].width);
   mirror["1"].x=420;
   mirror["1"].y=-130;
@@ -756,9 +838,9 @@ void create_mirror()
 
   mirror["2"].name="mirror2";
   mirror["2"].color=mirror_col;
-  mirror["2"].width=3;
-  mirror["2"].height=100;
-  mirror["2"].rot_angle=45;
+  mirror["2"].width=100;
+  mirror["2"].height=3;
+  mirror["2"].rot_angle=-45;
   mirror["2"].object = createRectangle (mirror_col, mirror["2"].height,mirror["2"].width);
   mirror["2"].x=420;
   mirror["2"].y=200;
@@ -768,9 +850,9 @@ void create_mirror()
 
   mirror["3"].name="mirror3";
   mirror["3"].color=mirror_col;
-  mirror["3"].width=3.5;
-  mirror["3"].height=100;
-  mirror["3"].rot_angle=60;
+  mirror["3"].width=100;
+  mirror["3"].height=3.5;
+  mirror["3"].rot_angle=-60;
   mirror["3"].object = createRectangle (mirror_col, mirror["3"].height,mirror["3"].width);
   mirror["3"].x=0;
   mirror["3"].y=300;
@@ -780,9 +862,9 @@ void create_mirror()
 
   mirror["4"].name="mirror4";
   mirror["4"].color=mirror_col;
-  mirror["4"].width=3.5;
-  mirror["4"].height=100;
-  mirror["4"].rot_angle=-25;
+  mirror["4"].width=100;
+  mirror["4"].height=3.5;
+  mirror["4"].rot_angle=25;
   mirror["4"].object = createRectangle (mirror_col, mirror["4"].height,mirror["4"].width);
   mirror["4"].x=0;
   mirror["4"].y=-10;
@@ -803,24 +885,8 @@ void initGL (GLFWwindow* window, int width, int height)
   create_cannon();
   create_lazer();
   create_mirror();
-  for (int i = 0; i < 5; i++)
-  {
-    create_bricks(black,i+4,100+i*60);
-    if(i<4)
-      create_bricks(black,i,-120-i*60);
-  }
-  for (int i = 9; i < 14; i++)
-  {
-    create_bricks(red,i+4,100+i*60);
-    if(i<4)
-      create_bricks(red,i,-120-i*60);
-  }
-  for (int i = 9; i < 14; i++)
-  {
-    create_bricks(green,i+4,100+i*60);
-    if(i<4)
-      create_bricks(green,i,-120-i*60);
-  }
+  brick_initializer();
+
   objects["mainline"].object=createLine(black,-500,partition,500,partition); // Generate the VAO, VBOs, vertices data & copy into the array buffer
 
 /* No change beyond this is allowed */
@@ -847,14 +913,17 @@ void initGL (GLFWwindow* window, int width, int height)
 
 int main (int argc, char** argv)
 {
+    srand (time(NULL));
 	int width = 1000;
 	int height = 700;
 
     GLFWwindow* window = initGLFW(width, height);
 
+
 	initGL (window, width, height);
 
-    double last_update_time = glfwGetTime(), current_time;
+    double last_update_time = glfwGetTime();
+    old_time=last_update_time;
 
     /* Draw in loop */
     while (!glfwWindowShouldClose(window)) {
@@ -869,10 +938,13 @@ int main (int argc, char** argv)
         glfwPollEvents();
 
         // Control based on time (Time based transformation like 5 degrees rotation every 0.5s)
+
         current_time = glfwGetTime(); // Time in seconds
-        if ((current_time - last_update_time) >= 0.5) { // atleast 0.5s elapsed since last frame
-            // do something every 0.5 seconds ..
-            last_update_time = current_time;
+
+        if ((current_time - last_update_time) >= 0.5)
+        {
+
+          last_update_time = current_time;
         }
     }
 
