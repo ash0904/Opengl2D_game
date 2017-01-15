@@ -553,6 +553,55 @@ void display(Base obj,glm::mat4 VP)
 
 int flag=1;
 int i=10,arr[101]={0},it=0;
+void display_brick()
+{
+  int rand1;
+  current_time=glfwGetTime();
+  if(current_time-old_time>1)
+  {
+    rand1=rand()%100;
+    if(brick[rand1].status==0)
+    {
+      brick[rand1].status=1;
+
+    }
+    old_time=current_time;
+  }
+
+    for(int k=0; k<100 ; k++)
+    {
+
+      if(brick[k].status==1)
+      {
+        display(brick[k],VP);
+        if(brick[k].y>partition+brick[k].height/2)
+          brick[k].y+=brick_speed;
+        else
+        {
+          brick[k].y=350+brick[k].height/2;
+          brick[k].status=0;
+          if(match_color(brick[k].color,red))
+          {
+            if(brick[k].x>bucket["red"].x-bucket["red"].width/2 && brick[k].x<bucket["red"].x+bucket["red"].width/2)
+            {
+              score+=2;
+            }
+          }
+
+          if(match_color(brick[k].color,green))
+          {
+            if(brick[k].x>bucket["green"].x-bucket["green"].width/2 && brick[k].x<bucket["green"].x+bucket["green"].width/2)
+            {
+              score+=2;
+            }
+          }
+          cout<<score<<endl;
+        }
+      }
+    }
+
+
+}
 /* Edit this function according to your assignment */
 void draw (){
   // clear the color and depth in the frame buffer
@@ -638,51 +687,7 @@ void draw (){
     bucket["green"].x+=bucket["green"].dx;;
 
   }
-
-int rand1;
-current_time=glfwGetTime();
-if(current_time-old_time>1)
-{
-  rand1=rand()%100;
-  if(brick[rand1].status==0)
-  {
-    brick[rand1].status=1;
-
-  }
-  old_time=current_time;
-}
-
-  for(int k=0; k<100 ; k++)
-  {
-
-    if(brick[k].status==1)
-    {
-      display(brick[k],VP);
-      if(brick[k].y>partition+brick[k].height/2)
-        brick[k].y+=brick_speed;
-      else
-      {
-        brick[k].y=350+brick[k].height/2;
-        brick[k].status=0;
-        if(match_color(brick[k].color,red))
-        {
-          if(brick[k].x>bucket["red"].x-bucket["red"].width/2 && brick[k].x<bucket["red"].x+bucket["red"].width/2)
-          {
-            score+=2;
-          }
-        }
-
-        if(match_color(brick[k].color,green))
-        {
-          if(brick[k].x>bucket["green"].x-bucket["green"].width/2 && brick[k].x<bucket["green"].x+bucket["green"].width/2)
-          {
-            score+=2;
-          }
-        }
-        cout<<score<<endl;
-      }
-    }
-  }
+  display_brick();
   display(mirror["1"],VP);
   display(mirror["3"],VP);
   display(mirror["2"],VP);
