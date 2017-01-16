@@ -77,9 +77,10 @@ typedef struct Sprite {
 map <string, Sprite> objects;
 map <string, Sprite> cannon; //Only store cannon components here
 map <int, Sprite> brick;
-map <string, Sprite> mirror;
+map <int, Sprite> mirror;
 map <string, Sprite> bucket;
 map <int, Sprite> lazer;
+int lazmir[1000][2]={0};
 
 struct GLMatrices {
 	glm::mat4 projection;
@@ -261,7 +262,7 @@ void draw3DObject (struct VAO* vao)
  **************************/
  void create_lazer(int no);
 float degree_per_rotation=1,brick_speed=-2,partition=-190,lazer_speed=20,bucket_speed=10;
-double time_diff=0, current_time,old_time,laz_time,laz_old_time;
+double time_diff=0, current_time,old_time,laz_time,laz_old_time,m_col_time;
 COLOR col[3]={black,red,green};
 long long score=0,laz_no=0;
 
@@ -614,7 +615,7 @@ void detect_collision()
         if(bobj.status==1)
         {
           dis=sqrt((lobj.x-bobj.x)*(lobj.x-bobj.x) +(lobj.y-bobj.y)*(lobj.y-bobj.y));
-          dis1=lobj.width*abs(cos(lobj.rot_angle*M_PI/180)/2) + bobj.width/2;
+          dis1=lobj.height*abs(cos(lobj.rot_angle*M_PI/180)/2) + bobj.width/2;
           dis2=lobj.height*abs(sin(lobj.rot_angle*M_PI/180)/2) + bobj.height/2;
           //cout<<dis<<" "<<dis1<<" "<<dis2<<endl;
           if(dis<dis1 || dis<dis2)
@@ -623,8 +624,7 @@ void detect_collision()
               score+=4;
             if(match_color(bobj.color,red) || match_color(bobj.color,green))
               score-=2;
-
-            cout<<"collision\n";
+                // cout<<"collision\n";
             lazer[li].status=0;
             reset_brick(bi);
           }
@@ -633,6 +633,53 @@ void detect_collision()
   }
 }
 
+void check_mirror_col(int li)
+{
+  for (map<int,Sprite>::iterator it = mirror.begin();it!=mirror.end();it++)
+    {
+      int current=it->first;
+      Sprite laz=lazer[li],mir=mirror[current];
+      if(laz.x>mir.x-mir.width*0.5*abs(cos(mir.rot_angle*M_PI/180)) && laz.x<mir.x+mir.width*0.5*abs(cos(mir.rot_angle*M_PI/180)) &&
+        laz.y>mir.y-mir.width*0.5*abs(sin(mir.rot_angle*M_PI/180)) && laz.y<mir.y+mir.width*0.5*abs(sin(mir.rot_angle*M_PI/180)) )
+      {
+      //  int current=1;
+        // cout << "mirror" << current<< endl;
+        // float dis1,dis2;
+        // cout<<cos(lazer[li].rot_angle*M_PI/180.0f)<<" "<<sin(lazer[li].rot_angle*M_PI/180.0f)<<"\n";
+        // // cout<<cos(mirror[current].rot_angle*M_PI/180.0f)<<" "<<sin(mirror[current].rot_angle*M_PI/180.0f)<<"\n";
+        // dis1=lazer[li].x+lazer[li].width*0.5*cos(lazer[li].rot_angle*M_PI/180.0f);
+        // dis2=lazer[li].y+lazer[li].width*0.5*sin(lazer[li].rot_angle*M_PI/180.0f);
+        // float dis3=(dis1-mirror[current].x)/cos(mirror[current].rot_angle*M_PI/180.0f);
+        // float dis4=(dis2-mirror[current].y)/sin(mirror[current].rot_angle*M_PI/18.0f);
+        // //cout<<dis3<<" "<<dis4<<" \n";
+        //  if (dis3 > -1*mirror[current].width/2 && dis3 < mirror[current].width/2 &&
+        // dis4 > -1*mirror[current].width/2 && dis4 < mirror[current].width/2)
+        // {
+        //     cout << "collide mirror" << endl;
+        //     lazer[li].rot_angle = 2*mirror[current].rot_angle - lazer[li].rot_angle;
+        // }
+          float mul1,mul2;
+          mul1=(laz.y+laz.width/2*sin(laz.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(laz.x+laz.width/2*cos(laz.rot_angle*M_PI/180)))-
+                (mir.y+mir.width/2*sin(mir.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(mir.x+mir.width/2)*cos(mir.rot_angle*M_PI/180));
+          mul2=(laz.y-laz.width/2*sin(laz.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(laz.x-laz.width/2*cos(laz.rot_angle*M_PI/180)))-
+                (mir.y+mir.width/2*sin(mir.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(mir.x+mir.width/2)*cos(mir.rot_angle*M_PI/180));
+          // if(mul1*mul2<=0)
+          // if(lazmir[li][0]==0 || lazmir[current][1]==0)
+          current_time=glfwGetTime();
+          // cout << "collide mirror" << endl;
+          if(current_time-m_col_time>0.1)
+          {
+            // cout << "rotated" << endl;
+
+              lazer[li].rot_angle = 2*mirror[current].rot_angle - lazer[li].rot_angle;
+              lazmir[li][0]=1;
+              lazmir[current][1]=1;
+
+              m_col_time=current_time;
+          }
+        }
+    }
+}
 
 void draw (){
   // clear the color and depth in the frame buffer
@@ -677,6 +724,13 @@ void draw (){
   draw3DObject(objects["mainline"].object);
 
   detect_collision();
+  // cout<<current_time<<" "<<m_col_time<<endl;
+    // cout<<" checking collision \n";
+    for(int li=0;li<laz_no;li++)
+    {
+      if(lazer[li].status)
+        check_mirror_col(li);
+    }
   if((cannon["main"].y<(350-cannon["main"].width/2-1) && cannon["main"].dy>0) ||
      (cannon["main"].y>(-190+cannon["main"].width/2+1) && cannon["main"].dy<0))
   { cannon["main"].y+=cannon["main"].dy;
@@ -720,13 +774,13 @@ void draw (){
 
   }
   display_brick(VP);
-  display(mirror["1"],VP);
-  display(mirror["3"],VP);
-  display(mirror["2"],VP);
-  display(mirror["4"],VP);
+  display(mirror[1],VP);
+  display(mirror[3],VP);
+  display(mirror[2],VP);
+  display(mirror[4],VP);
   display(bucket["green"],VP);
   display(bucket["red"],VP);
-  cout<<score<<endl;
+  //cout<<score<<endl;
 
 }
 
@@ -863,53 +917,53 @@ void brick_initializer()
 
 void create_mirror()
 {
-  mirror["1"].name="mirror1";
-  mirror["1"].color=mirror_col;
-  mirror["1"].width=100;
-  mirror["1"].height=3;
-  mirror["1"].rot_angle=45;
-  mirror["1"].object = createRectangle (mirror_col, mirror["1"].height,mirror["1"].width);
-  mirror["1"].x=420;
-  mirror["1"].y=-130;
-  mirror["1"].status=0;
-  mirror["1"].dx=0;
-  mirror["1"].dy=0;
+  mirror[1].name="mirror1";
+  mirror[1].color=mirror_col;
+  mirror[1].width=100;
+  mirror[1].height=3;
+  mirror[1].rot_angle=45;
+  mirror[1].object = createRectangle (mirror_col, mirror[1].height,mirror[1].width);
+  mirror[1].x=420;
+  mirror[1].y=-130;
+  mirror[1].status=0;
+  mirror[1].dx=0;
+  mirror[1].dy=0;
 
-  mirror["2"].name="mirror2";
-  mirror["2"].color=mirror_col;
-  mirror["2"].width=100;
-  mirror["2"].height=3;
-  mirror["2"].rot_angle=-45;
-  mirror["2"].object = createRectangle (mirror_col, mirror["2"].height,mirror["2"].width);
-  mirror["2"].x=420;
-  mirror["2"].y=200;
-  mirror["2"].status=0;
-  mirror["2"].dx=0;
-  mirror["2"].dy=0;
+  mirror[2].name="mirror2";
+  mirror[2].color=mirror_col;
+  mirror[2].width=100;
+  mirror[2].height=3;
+  mirror[2].rot_angle=-45;
+  mirror[2].object = createRectangle (mirror_col, mirror[2].height,mirror[2].width);
+  mirror[2].x=420;
+  mirror[2].y=200;
+  mirror[2].status=0;
+  mirror[2].dx=0;
+  mirror[2].dy=0;
 
-  mirror["3"].name="mirror3";
-  mirror["3"].color=mirror_col;
-  mirror["3"].width=100;
-  mirror["3"].height=3.5;
-  mirror["3"].rot_angle=-60;
-  mirror["3"].object = createRectangle (mirror_col, mirror["3"].height,mirror["3"].width);
-  mirror["3"].x=0;
-  mirror["3"].y=300;
-  mirror["3"].status=0;
-  mirror["3"].dx=0;
-  mirror["3"].dy=0;
+  mirror[3].name="mirror3";
+  mirror[3].color=mirror_col;
+  mirror[3].width=100;
+  mirror[3].height=3.5;
+  mirror[3].rot_angle=-60;
+  mirror[3].object = createRectangle (mirror_col, mirror[3].height,mirror[3].width);
+  mirror[3].x=0;
+  mirror[3].y=300;
+  mirror[3].status=0;
+  mirror[3].dx=0;
+  mirror[3].dy=0;
 
-  mirror["4"].name="mirror4";
-  mirror["4"].color=mirror_col;
-  mirror["4"].width=100;
-  mirror["4"].height=3.5;
-  mirror["4"].rot_angle=25;
-  mirror["4"].object = createRectangle (mirror_col, mirror["4"].height,mirror["4"].width);
-  mirror["4"].x=0;
-  mirror["4"].y=-10;
-  mirror["4"].status=0;
-  mirror["4"].dx=0;
-  mirror["4"].dy=0;
+  mirror[4].name="mirror4";
+  mirror[4].color=mirror_col;
+  mirror[4].width=100;
+  mirror[4].height=3.5;
+  mirror[4].rot_angle=25;
+  mirror[4].object = createRectangle (mirror_col, mirror[4].height,mirror[4].width);
+  mirror[4].x=0;
+  mirror[4].y=-10;
+  mirror[4].status=0;
+  mirror[4].dx=0;
+  mirror[4].dy=0;
 
 }
 
@@ -963,6 +1017,7 @@ int main (int argc, char** argv)
     double last_update_time = glfwGetTime();
     old_time=last_update_time;
     laz_old_time=last_update_time-0.5;
+    m_col_time=last_update_time;
     /* Draw in loop */
     while (!glfwWindowShouldClose(window)) {
 
