@@ -58,6 +58,7 @@ COLOR lightpink = {255/255.0,122/255.0,173/255.0};
 COLOR darkpink = {255/255.0,51/255.0,119/255.0};
 COLOR white = {255/255.0,255/255.0,255/255.0};
 
+
 typedef struct Sprite {
     string name;          // name of object
     COLOR color;          // color of object
@@ -262,9 +263,11 @@ void draw3DObject (struct VAO* vao)
  **************************/
  void create_lazer(int no);
 float degree_per_rotation=1,brick_speed=-2,partition=-190,lazer_speed=20,bucket_speed=10;
+double mouse_pos_x=0, mouse_pos_y=0;
+double new_mouse_pos_x=0, new_mouse_pos_y=0;
 double time_diff=0, current_time,old_time,laz_time,laz_old_time,m_col_time;
 COLOR col[3]={black,red,green};
-long long score=0,laz_no=0;
+long long score=0,laz_no=0,mleft_click=0,mright_click=0;
 
 /* Executed when a regular key is pressed/released/held-down */
 /* Prefered for Keyboard events */
@@ -383,17 +386,35 @@ void keyboardChar (GLFWwindow* window, unsigned int key)
 	}
 }
 
+string move;
 /* Executed when a mouse button is pressed/released */
 void mouseButton (GLFWwindow* window, int button, int action, int mods)
 {
     switch (button) {
         case GLFW_MOUSE_BUTTON_LEFT:
+            if (action == GLFW_PRESS)
+            {
+              Sprite b1=bucket["red"],b2=bucket["green"];
+              mleft_click=1;
+              glfwGetCursorPos(window, &new_mouse_pos_x, &new_mouse_pos_y);
+              if(abs(new_mouse_pos_x-500-b1.x)<b1.width/2 && abs(new_mouse_pos_y-600)<b1.height/2)
+                move="red";
+              else if(abs(new_mouse_pos_x-500-b2.x)<b1.width/2 && abs(new_mouse_pos_y-600)<b2.height/2)
+                move="green";
+              else move="dont";
+            }
             if (action == GLFW_RELEASE)
-  //              triangle_rot_dir *= -1;
+            {
+              mleft_click=0;
+              mouse_pos_x=new_mouse_pos_x;
+              mouse_pos_y=new_mouse_pos_y;
+            }
+
+
             break;
         case GLFW_MOUSE_BUTTON_RIGHT:
-            if (action == GLFW_RELEASE) {
-    //            rectangle_rot_dir *= -1;
+            if (action == GLFW_PRESS) {
+                mright_click=1;
             }
             break;
         default:
@@ -595,6 +616,35 @@ void display_brick(glm::mat4 VP)
       }
     }
 }
+void display_buckets(glm::mat4 VP,GLFWwindow* window)
+{
+  if((bucket["red"].x<(500-bucket["red"].width/2-6) && bucket["red"].dx>0) ||
+  (bucket["red"].x>(-500+bucket["red"].width/2+3) && bucket["red"].dx<0))
+  {
+    bucket["red"].x+=bucket["red"].dx;;
+  }
+
+  if((bucket["green"].x<(500-bucket["green"].width/2-6) && bucket["green"].dx>0) ||
+  (bucket["green"].x>(-500+bucket["green"].width/2+4) && bucket["green"].dx<0))
+  {
+    bucket["green"].x+=bucket["green"].dx;;
+
+  }
+  if(mleft_click)
+  {
+    glfwGetCursorPos(window, &new_mouse_pos_x, &new_mouse_pos_y);
+    if(move=="red")
+      bucket["red"].x=new_mouse_pos_x-500;
+    else if(move=="green")
+       bucket["green"].x=new_mouse_pos_x-500;
+    // if(abs(new_mouse_pos_x-500-b1.x)<b1.width/2 && abs(new_mouse_pos_y-600)<b1.height/2)
+    // else if(abs(new_mouse_pos_x-500-b2.x)<b1.width/2 && abs(new_mouse_pos_y-600)<b2.height/2)
+
+
+  }
+  display(bucket["green"],VP);
+  display(bucket["red"],VP);
+}
 /* Edit this function according to your assignment */
 long long st1=0,st2=0;
 void detect_collision()
@@ -681,7 +731,7 @@ void check_mirror_col(int li)
     }
 }
 
-void draw (){
+void draw (GLFWwindow* window){
   // clear the color and depth in the frame buffer
   glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -743,12 +793,12 @@ void draw (){
     lazer[i].dy=lazer_speed*sin(lazer[i].rot_angle*M_PI/180);
     lazer[i].x+=lazer[i].dx;
     lazer[i].y+=lazer[i].dy;
+    if(lazer[i].x-lazer[i].width>500 || lazer[i].y-lazer[i].height>350
+      ||  lazer[i].x-lazer[i].width<-550 || lazer[i].y-lazer[i].height<partition)
+    {
+      lazer[i].status=0;
+    }
     display(lazer[i],VP);
-    if(lazer[i].x-lazer[i].width>500 || lazer[i].y-lazer[i].height>350 )
-  //   ||  lazer[i].x-lazer[i].width<-500 || lazer[i].y-lazer[i].height<-350)
-        {
-          lazer[i].status=0;
-        }
   }
   if(cannon["front"].key_press)
   {
@@ -761,27 +811,13 @@ void draw (){
   display(cannon["main"],VP);
   display(cannon["front"],VP);
   //if(bucket["red"].key_press==1 || bucket["green"].key_press==1)
-  if((bucket["red"].x<(500-bucket["red"].width/2-6) && bucket["red"].dx>0) ||
-  (bucket["red"].x>(-500+bucket["red"].width/2+3) && bucket["red"].dx<0))
-  {
-    bucket["red"].x+=bucket["red"].dx;;
-  }
-
-  if((bucket["green"].x<(500-bucket["green"].width/2-6) && bucket["green"].dx>0) ||
-  (bucket["green"].x>(-500+bucket["green"].width/2+4) && bucket["green"].dx<0))
-  {
-    bucket["green"].x+=bucket["green"].dx;;
-
-  }
+  display_buckets(VP,window);
   display_brick(VP);
   display(mirror[1],VP);
   display(mirror[3],VP);
   display(mirror[2],VP);
   display(mirror[4],VP);
-  display(bucket["green"],VP);
-  display(bucket["red"],VP);
   //cout<<score<<endl;
-
 }
 
 /* Initialise glfw window, I/O callbacks and the renderer to use */
@@ -828,6 +864,7 @@ GLFWwindow* initGLFW (int width, int height)
 
     /* Register function to handle mouse click */
     glfwSetMouseButtonCallback(window, mouseButton);  // mouse button clicks
+  //  glfwSetScrollCallback(window, mousescroll); // mouse scroll
 
     return window;
 }
@@ -1022,7 +1059,7 @@ int main (int argc, char** argv)
     while (!glfwWindowShouldClose(window)) {
 
         // OpenGL Draw commands
-        draw();
+        draw(window);
 
         // Swap Frame Buffer in double buffering
         glfwSwapBuffers(window);
