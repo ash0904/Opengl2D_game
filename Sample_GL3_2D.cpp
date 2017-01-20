@@ -261,7 +261,7 @@ void draw3DObject (struct VAO* vao)
 /**************************
  * Customizable functions *
  **************************/
- void create_lazer(int no);
+void create_lazer(int no);
 float degree_per_rotation=1,brick_speed=-2,partition=-190,lazer_speed=20,bucket_speed=10;
 double mouse_pos_x=0, mouse_pos_y=0;
 double new_mouse_pos_x=0, new_mouse_pos_y=0;
@@ -318,6 +318,7 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 if(current_time-laz_old_time>1)
                 {
                   create_lazer(laz_no/2);
+                  cout<<lazer[laz_no/2].rot_angle<<endl;
                   laz_no++;
                   laz_old_time=current_time;
                 }
@@ -390,27 +391,47 @@ string move;
 /* Executed when a mouse button is pressed/released */
 void mouseButton (GLFWwindow* window, int button, int action, int mods)
 {
+  Sprite b1=bucket["red"],b2=bucket["green"],c1=cannon["main"],c2=cannon["front"];
     switch (button) {
         case GLFW_MOUSE_BUTTON_LEFT:
             if (action == GLFW_PRESS)
             {
-              Sprite b1=bucket["red"],b2=bucket["green"];
               mleft_click=1;
               glfwGetCursorPos(window, &new_mouse_pos_x, &new_mouse_pos_y);
-              if(abs(new_mouse_pos_x-500-b1.x)<b1.width/2 && abs(new_mouse_pos_y-600)<b1.height/2)
+              new_mouse_pos_x=new_mouse_pos_x-500;
+              new_mouse_pos_y=new_mouse_pos_y*-1+350;
+              if(abs(new_mouse_pos_x-b1.x)<b1.width/2 && abs(new_mouse_pos_y-b1.y)<b1.height/2)
                 move="red";
-              else if(abs(new_mouse_pos_x-500-b2.x)<b1.width/2 && abs(new_mouse_pos_y-600)<b2.height/2)
+              else if(abs(new_mouse_pos_x-b2.x)<b2.width/2 && abs(new_mouse_pos_y-b2.y)<b2.height/2)
                 move="green";
-              else move="dont";
+              else if(abs(new_mouse_pos_x-c1.x)<c1.width/2 && abs(new_mouse_pos_y-c1.y)<c1.height/2)
+                move="cmain";
+
+              else
+                move="dont";
+                // cout<<c1.width/2 << " "<<c1.height/2<<endl;
+                // cout<<abs(new_mouse_pos_x-500-c1.x) << " "<< abs(new_mouse_pos_y-350-c1.y)<<endl;
             }
             if (action == GLFW_RELEASE)
             {
               mleft_click=0;
               mouse_pos_x=new_mouse_pos_x;
               mouse_pos_y=new_mouse_pos_y;
+              float cur_angle;
+              //  cout<<new_mouse_pos_x<<" "<<new_mouse_pos_y<<endl;
+              cur_angle=atan((new_mouse_pos_y-c2.y)/(new_mouse_pos_x-c2.x))*180/M_PI;
+              if(new_mouse_pos_x>(c2.x) && new_mouse_pos_y>partition)
+              {
+                // cout<<"hello"<<cur_angle;
+                if(current_time-laz_old_time>1)
+                {
+                  cannon["front"].rot_angle=cur_angle;
+                  create_lazer(laz_no/2);
+                  laz_no++;
+                  laz_old_time=current_time;
+                }
+              }
             }
-
-
             break;
         case GLFW_MOUSE_BUTTON_RIGHT:
             if (action == GLFW_PRESS) {
@@ -632,16 +653,18 @@ void display_buckets(glm::mat4 VP,GLFWwindow* window)
   }
   if(mleft_click)
   {
-    glfwGetCursorPos(window, &new_mouse_pos_x, &new_mouse_pos_y);
     if(move=="red")
-      bucket["red"].x=new_mouse_pos_x-500;
+    {
+      if(new_mouse_pos_x<(500-bucket["red"].width/2-6) && new_mouse_pos_x>(-500+bucket["red"].width/2+3) )
+        bucket["red"].x=new_mouse_pos_x;
+    }
     else if(move=="green")
-       bucket["green"].x=new_mouse_pos_x-500;
-    // if(abs(new_mouse_pos_x-500-b1.x)<b1.width/2 && abs(new_mouse_pos_y-600)<b1.height/2)
-    // else if(abs(new_mouse_pos_x-500-b2.x)<b1.width/2 && abs(new_mouse_pos_y-600)<b2.height/2)
-
-
+    {
+      if(new_mouse_pos_x<(500-bucket["green"].width/2-6) && new_mouse_pos_x>(-500+bucket["green"].width/2+3) )
+       bucket["green"].x=new_mouse_pos_x;
+    }
   }
+
   display(bucket["green"],VP);
   display(bucket["red"],VP);
 }
@@ -772,6 +795,12 @@ void draw (GLFWwindow* window){
   MVP = VP * Matrices.model; // MVP = p * V * M
   glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
   draw3DObject(objects["mainline"].object);
+  if(mleft_click || mright_click)
+  {
+    glfwGetCursorPos(window, &new_mouse_pos_x, &new_mouse_pos_y);
+    new_mouse_pos_x=new_mouse_pos_x-500;
+    new_mouse_pos_y=new_mouse_pos_y*-1+350;
+  }
 
   detect_collision();
   // cout<<current_time<<" "<<m_col_time<<endl;
@@ -782,10 +811,18 @@ void draw (GLFWwindow* window){
         check_mirror_col(li);
     }
   if((cannon["main"].y<(350-cannon["main"].width/2-1) && cannon["main"].dy>0) ||
-     (cannon["main"].y>(-190+cannon["main"].width/2+1) && cannon["main"].dy<0))
+     (cannon["main"].y>(partition+cannon["main"].width/2+1) && cannon["main"].dy<0))
   { cannon["main"].y+=cannon["main"].dy;
     cannon["front"].y+=cannon["main"].dy;
   }
+  if(move=="cmain" && mleft_click==1)
+  {
+    if(new_mouse_pos_y<(350-cannon["main"].width/2-1) &&
+       new_mouse_pos_y>(partition+cannon["main"].width/2+1))
+        cannon["main"].y=new_mouse_pos_y;
+        cannon["front"].y=cannon["main"].y;
+  }
+
   for(int i=0;i<laz_no;i++)
   if(lazer[i].status)
   {
