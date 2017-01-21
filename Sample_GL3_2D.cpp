@@ -261,7 +261,9 @@ void draw3DObject (struct VAO* vao)
 /**************************
  * Customizable functions *
  **************************/
-void create_lazer(int no);
+float x_change = 0; //For the camera pan
+float y_change = 0; //For the camera pan
+float zoom_camera = 1;
 float degree_per_rotation=1,brick_speed=-2,partition=-190,lazer_speed=20,bucket_speed=10;
 double mouse_pos_x=0, mouse_pos_y=0;
 double new_mouse_pos_x=0, new_mouse_pos_y=0;
@@ -269,7 +271,45 @@ double time_diff=0, current_time,old_time,laz_time,laz_old_time,m_col_time;
 COLOR col[3]={black,red,green};
 long long score=0,laz_no=0,mleft_click=0,mright_click=0;
 
+void create_lazer(int no);
 /* Executed when a regular key is pressed/released/held-down */
+void mousescroll(GLFWwindow* window, double xoffset, double yoffset)
+{
+    if (yoffset==-1) {
+        zoom_camera /= 1.1; //make it bigger than current size
+    }
+    else if(yoffset==1){
+        zoom_camera *= 1.1; //make it bigger than current size
+    }
+    if (zoom_camera<=1) {
+        zoom_camera = 1;
+    }
+    if (zoom_camera>=4) {
+        zoom_camera=4;
+    }
+    if(x_change-500.0f/zoom_camera<-500)
+        x_change=-500+500.0f/zoom_camera;
+    else if(x_change+500.0f/zoom_camera>500)
+        x_change=500-500.0f/zoom_camera;
+    if(y_change-350.0f/zoom_camera<-350)
+        y_change=-350+350.0f/zoom_camera;
+    else if(y_change+350.0f/zoom_camera>350)
+        y_change=350-350.0f/zoom_camera;
+    Matrices.projection = glm::ortho((float)(-500.0f/zoom_camera+x_change), (float)(500.0f/zoom_camera+x_change), (float)(-350.0f/zoom_camera+y_change), (float)(350.0f/zoom_camera+y_change), 0.1f, 500.0f);
+}
+
+//Ensure the panning does not go out of the map
+void check_pan(){
+    if(x_change-500.0f/zoom_camera<-500)
+        x_change=-500+500.0f/zoom_camera;
+    else if(x_change+500.0f/zoom_camera>500)
+        x_change=500-500.0f/zoom_camera;
+    if(y_change-350.0f/zoom_camera<-350)
+        y_change=-350+350.0f/zoom_camera;
+    else if(y_change+350.0f/zoom_camera>350)
+        y_change=350-350.0f/zoom_camera;
+}
+
 /* Prefered for Keyboard events */
 void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -279,6 +319,30 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
 
     if (action == GLFW_RELEASE) {
         switch (key) {
+            case GLFW_KEY_UP:
+                mousescroll(window,0,+1);
+                check_pan();
+                break;
+            case GLFW_KEY_DOWN:
+                mousescroll(window,0,-1);
+                check_pan();
+                break;
+            case GLFW_KEY_RIGHT:
+                x_change+=10;
+                check_pan();
+                break;
+            case GLFW_KEY_LEFT:
+                x_change-=10;
+                check_pan();
+                break;
+            case GLFW_KEY_N:
+                y_change+=10;
+                check_pan();
+                break;
+            case GLFW_KEY_M:
+                y_change-=10;
+                check_pan();
+                break;
             case GLFW_KEY_S:
                 cannon["main"].dy=0;
                 cannon["front"].dy=0;
@@ -297,19 +361,19 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
             case GLFW_KEY_D:
                 cannon["front"].key_press=0;
                 break;
-            case GLFW_KEY_LEFT:
+            case GLFW_KEY_J:
                 bucket["red"].dx=0;
                 bucket["red"].key_press=0;
                 break;
-            case GLFW_KEY_RIGHT:
+            case GLFW_KEY_L:
                 bucket["red"].dx=0;
                 bucket["red"].key_press=0;
                 break;
-            case GLFW_KEY_UP:
+            case GLFW_KEY_I:
                 bucket["green"].dx=0;
                 bucket["green"].key_press=0;
                 break;
-            case GLFW_KEY_DOWN:
+            case GLFW_KEY_K:
                 bucket["green"].dx=0;
                 bucket["green"].key_press=0;
                 break;
@@ -318,7 +382,6 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 if(current_time-laz_old_time>1)
                 {
                   create_lazer(laz_no/2);
-                  cout<<lazer[laz_no/2].rot_angle<<endl;
                   laz_no++;
                   laz_old_time=current_time;
                 }
@@ -341,19 +404,19 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
               cannon["front"].dy=-3;
               cannon["main"].key_press=1;
               break;
-          case GLFW_KEY_LEFT:
+          case GLFW_KEY_J:
               bucket["red"].dx=-1*bucket_speed;
               bucket["red"].key_press=1;
               break;
-          case GLFW_KEY_RIGHT:
+          case GLFW_KEY_L:
               bucket["red"].dx=bucket_speed;
               bucket["red"].key_press=1;
               break;
-          case GLFW_KEY_UP:
+          case GLFW_KEY_I:
               bucket["green"].dx=-1*bucket_speed;
               bucket["green"].key_press=1;
               break;
-          case GLFW_KEY_DOWN:
+          case GLFW_KEY_K:
               bucket["green"].dx=bucket_speed;
               bucket["green"].key_press=1;
               break;
@@ -415,10 +478,10 @@ void mouseButton (GLFWwindow* window, int button, int action, int mods)
             if (action == GLFW_RELEASE)
             {
               mleft_click=0;
-              mouse_pos_x=new_mouse_pos_x;
-              mouse_pos_y=new_mouse_pos_y;
               float cur_angle;
-              //  cout<<new_mouse_pos_x<<" "<<new_mouse_pos_y<<endl;
+              glfwGetCursorPos(window, &new_mouse_pos_x, &new_mouse_pos_y);
+              new_mouse_pos_x=new_mouse_pos_x-500;
+              new_mouse_pos_y=new_mouse_pos_y*-1+350;
               cur_angle=atan((new_mouse_pos_y-c2.y)/(new_mouse_pos_x-c2.x))*180/M_PI;
               if(new_mouse_pos_x>(c2.x) && new_mouse_pos_y>partition)
               {
@@ -436,6 +499,10 @@ void mouseButton (GLFWwindow* window, int button, int action, int mods)
         case GLFW_MOUSE_BUTTON_RIGHT:
             if (action == GLFW_PRESS) {
                 mright_click=1;
+            }
+            if (action == GLFW_RELEASE)
+            {
+              mright_click=0;
             }
             break;
         default:
@@ -467,10 +534,10 @@ void reshapeWindow (GLFWwindow* window, int width, int height)
     // Matrices.projection = glm::perspective (fov, (GLfloat) fbwidth / (GLfloat) fbheight, 0.1f, 500.0f);
 
     // Ortho projection for 2D views (-x,+x,-y,+y)
-    Matrices.projection = glm::ortho(-500.0f, 500.0f, -350.0f, 350.0f, 0.1f, 500.0f);
+      Matrices.projection = glm::ortho((float)(-500.0f/zoom_camera+x_change), (float)(500.0f/zoom_camera+x_change), (float)(-350.0f/zoom_camera+y_change), (float)(350.0f/zoom_camera+y_change), 0.1f, 500.0f);
+  //  Matrices.projection = glm::ortho(-500.0f/zoom_camera, 500.0f/zoom_camera, -350.0f/zoom_camera, 350.0f/zoom_camera, 0.1f, 500.0f);
 }
 
-VAO *triangle;
 
 VAO* createLine (COLOR color,int x1,int y1,int x2,int y2)
 {
@@ -495,7 +562,7 @@ VAO* createLine (COLOR color,int x1,int y1,int x2,int y2)
 
 
 // Creates the triangle object used in this sample code
-void createTriangle ()
+VAO* createTriangle ()
 {
   /* ONLY vertices between the bounds specified in glm::ortho will be visible on screen */
 
@@ -513,7 +580,7 @@ void createTriangle ()
   };
 
   // create3DObject creates and returns a handle to a VAO that can be used later
-  triangle = create3DObject(GL_TRIANGLES, 3, vertex_buffer_data, color_buffer_data, GL_LINE);
+  return create3DObject(GL_TRIANGLES, 3, vertex_buffer_data, color_buffer_data, GL_LINE);
 }
 
 
@@ -801,6 +868,15 @@ void draw (GLFWwindow* window){
     new_mouse_pos_x=new_mouse_pos_x-500;
     new_mouse_pos_y=new_mouse_pos_y*-1+350;
   }
+  if(mright_click==1)
+  {
+    glfwGetCursorPos(window, &new_mouse_pos_x, &new_mouse_pos_y);
+      x_change+=new_mouse_pos_x-mouse_pos_x;
+      y_change-=new_mouse_pos_y-mouse_pos_y;
+      check_pan();
+  }
+  Matrices.projection = glm::ortho((-500.0f/zoom_camera+x_change), (500.0f/zoom_camera+x_change), (-350.0f/zoom_camera+y_change),(350.0f/zoom_camera+y_change), 0.1f, 500.0f);
+  glfwGetCursorPos(window, &mouse_pos_x, &mouse_pos_y);
 
   detect_collision();
   // cout<<current_time<<" "<<m_col_time<<endl;
@@ -901,7 +977,7 @@ GLFWwindow* initGLFW (int width, int height)
 
     /* Register function to handle mouse click */
     glfwSetMouseButtonCallback(window, mouseButton);  // mouse button clicks
-  //  glfwSetScrollCallback(window, mousescroll); // mouse scroll
+    glfwSetScrollCallback(window, mousescroll); // mouse scroll
 
     return window;
 }
@@ -1087,7 +1163,7 @@ int main (int argc, char** argv)
 
 
 	initGL (window, width, height);
-
+  glfwGetCursorPos(window, &mouse_pos_x, &mouse_pos_y);
     double last_update_time = glfwGetTime();
     old_time=last_update_time;
     laz_old_time=last_update_time-0.5;
