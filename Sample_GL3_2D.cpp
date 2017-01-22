@@ -7,6 +7,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <ao/ao.h>
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
@@ -81,6 +82,7 @@ map <int, Sprite> brick;
 map <int, Sprite> mirror;
 map <string, Sprite> bucket;
 map <int, Sprite> lazer;
+map <int, Sprite> sboard;
 int lazmir[1000][2]={0};
 
 struct GLMatrices {
@@ -678,7 +680,7 @@ void display(Sprite obj,glm::mat4 VP)
   glm::mat4 ObjectTransform;
   glm::mat4 translateObject = glm::translate (glm::vec3(obj.x,obj.y, 0.0f)); // glTranslatef
   glm::mat4  rotateTriangle=glm::mat4(1.0f);
-  if(obj.name=="mirror1" || obj.name=="mirror2" || obj.name=="mirror3" || obj.name=="mirror4")
+  if(obj.name=="mirror1" || obj.name=="mirror2" || obj.name=="mirror3" || obj.name=="mirror4" || obj.name=="sboard")
   {
    rotateTriangle = glm::rotate((float)(obj.rot_angle*M_PI/180.0f), glm::vec3(0,0,1));  // rotate about vector (1,0,0)
   }
@@ -728,13 +730,13 @@ void display_brick(glm::mat4 VP,GLFWwindow* window)
             if(brick[k].x>bucket["red"].x-bucket["red"].width/2 && brick[k].x<bucket["red"].x+bucket["red"].width/2)
               {
                 score+=1;
-                cout<<"Score: "<<score<<endl;
+                // cout<<"Score: "<<score<<endl;
               }
           if(match_color(brick[k].color,green))
             if(brick[k].x>bucket["green"].x-bucket["green"].width/2 && brick[k].x<bucket["green"].x+bucket["green"].width/2)
             {
               score+=1;
-              cout<<"Score: "<<score<<endl;
+              // cout<<"Score: "<<score<<endl;
             }
           if(match_color(brick[k].color,black))
           if(brick[k].x>bucket["green"].x-bucket["green"].width/2 && brick[k].x<bucket["green"].x+bucket["green"].width/2
@@ -787,12 +789,10 @@ void detect_collision(GLFWwindow* window)
   float temp=glfwGetTime();
   float dis,dis1,dis2;
   //if(current_time-temp>5)
-  //st1++;
-
-  for(li=st1;li<laz_no;li++)
-  {
-    Sprite lobj=lazer[li],bobj;
-    if(lobj.status==1)
+  //st1++;mis_hit<<  for(li=st1;li<laz_no;li++)
+    {
+      Sprite lobj=lazer[li],bobj;
+      if(lobj.status==1)
       for(bi=0;bi<100;bi++)
       {
         bobj=brick[bi];
@@ -805,15 +805,15 @@ void detect_collision(GLFWwindow* window)
           {
             if(match_color(bobj.color,black))
               {
-                score+=2;
-                cout<<"Score: "<<score<<endl;
+                score+=1;
+                // cout<<"Score: "<<score<<endl;
               }
             if(match_color(bobj.color,red) || match_color(bobj.color,green))
               {
                 score-=1;
                 mis_hit--;
-                cout<<mis_hit<<" (miss hit remaining)\n";
-                cout<<"Score: "<<score<<endl;
+                cout<<"miss hits remaining: "<<mis_hit<<endl;
+                // cout<<"Score: "<<score<<endl;
                 if(mis_hit==0)
                 {
                   cout<<"Final score is: "<<score<<endl;
@@ -872,6 +872,58 @@ void check_mirror_col(int li)
           }
         }
     }
+}
+
+void check_score(GLFWwindow* window)
+{
+  if(score==99)
+  {
+    cout<<"Congratulations! \n You Win\n";
+  }
+  if(score==-99)
+  {
+    cout<<"Oops! \n You Lose\n";
+  }
+  int o,t,nf=0;
+  for(i=1;i<=15;i++)
+    sboard[i].status=0;
+  if(score<0)
+    {
+      sboard[15].status=1;
+      score*=-1;
+    }
+  o=score%10;
+  t=score/10;
+  if(sboard[15].status)
+    score*=-1;
+  if(o==0 || o==2 || o==3 || o==5 || o==6 || o==7 || o==8 || o==9)
+    sboard[1].status=1;
+  if(o==0 || o==1 || o==2 || o==3 || o==4 || o==7 || o==8 || o==9)
+    sboard[2].status=1;
+  if(o==0 || o==1 || o==3 || o==4 || o==5 || o==6 || o==7 || o==8 || o==9)
+    sboard[3].status=1;
+  if(o==0 ||o==2 || o==3 || o==5 || o==6 || o==8 || o==9)
+    sboard[4].status=1;
+  if(o==0 || o==2 || o==6 || o==8)
+    sboard[5].status=1;
+  if(o==0  || o==4 || o==5 || o==6 || o==8 || o==9)
+    sboard[6].status=1;
+  if( o==2 || o==3 || o==4 || o==5 || o==6 || o==8 || o==9 )
+    sboard[7].status=1;
+  if(t==0 || t==2 || t==3 || t==5 || t==6 || t==7 || t==8 || t==9)
+    sboard[8].status=1;
+  if(t==0 || t==1 || t==2 || t==3 || t==4 || t==7 || t==8 || t==9)
+    sboard[9].status=1;
+  if(t==0 || t==1 || t==3 || t==4 || t==5 || t==6 || t==7 || t==8 || t==9)
+    sboard[10].status=1;
+  if(t==0 ||t==2 || t==3 || t==5 || t==6 || t==8 || t==9)
+    sboard[11].status=1;
+  if(t==0 || t==2 || t==6 || t==8)
+    sboard[12].status=1;
+  if(t==0 || t==4 || t==5 || t==6 || t==8 || t==9)
+    sboard[13].status=1;
+  if( t==2 || t==3 || t==4 || t==5 || t==6 || t==8 || t==9 )
+    sboard[14].status=1;
 }
 
 void draw (GLFWwindow* window){
@@ -983,6 +1035,13 @@ void draw (GLFWwindow* window){
   display(mirror[3],VP);
   display(mirror[2],VP);
   display(mirror[4],VP);
+  // score=-88;
+  check_score(window);
+  for(int i=1;i<=15;i++)
+  {
+   if(sboard[i].status)
+      display(sboard[i],VP);
+  }
   //cout<<score<<endl;
 }
 
@@ -1015,11 +1074,7 @@ GLFWwindow* initGLFW (int width, int height)
 
     /* --- register callbacks with GLFW --- */
 
-    /* Register function to handle window resizes */
-    /* With Retina display on Mac OS X GLFW's FramebufferSize
-     is different from WindowSize */
-    glfwSetFramebufferSizeCallback(window, reshapeWindow);
-    glfwSetWindowSizeCallback(window, reshapeWindow);
+    /* Register function to handle window resi  if(no==1)
 
     /* Register function to handle window close */
     glfwSetWindowCloseCallback(window, quit);
@@ -1167,7 +1222,108 @@ void create_mirror()
   mirror[4].status=0;
   mirror[4].dx=0;
   mirror[4].dy=0;
+}
 
+void create_board(int no)
+{
+  sboard[no].name="sboard";
+  sboard[no].color=black;
+  sboard[no].width=3;
+  sboard[no].height=50;
+  sboard[no].status=0;
+  sboard[no].rot_angle=0;
+  if(no==1)
+  {
+    sboard[no].rot_angle=90;
+    sboard[no].height=35;
+    sboard[no].x=478;
+    sboard[no].y=345;
+  }
+  if(no==2)
+  {
+    // sboard[no].rot_angle=0;
+    sboard[no].x=495;
+    sboard[no].y=323;
+  }
+  if(no==3)
+  {
+    sboard[no].x=495;
+    sboard[no].y=268;
+  }
+  if(no==4)
+  {
+    sboard[no].rot_angle=90;
+    sboard[no].height=35;
+    sboard[no].x=478;
+    sboard[no].y=240;
+  }
+  if(no==5)
+  {
+    sboard[no].x=460;
+    sboard[no].y=268;
+  }
+  if(no==6)
+  {
+    sboard[no].x=460;
+    sboard[no].y=323;
+  }
+  if(no==7)
+  {
+    sboard[no].rot_angle=90;
+    sboard[no].height=35;
+    sboard[no].x=478;
+    sboard[no].y=295;
+  }
+  if(no==8)
+  {
+    sboard[no].rot_angle=90;
+    sboard[no].height=35;
+    sboard[no].x=428;
+    sboard[no].y=345;
+  }
+  if(no==9)
+  {
+    // sboard[no].rot_angle=0;
+    sboard[no].x=445;
+    sboard[no].y=323;
+  }
+  if(no==10)
+  {
+    sboard[no].x=445;
+    sboard[no].y=268;
+  }
+  if(no==11)
+  {
+    sboard[no].rot_angle=90;
+    sboard[no].height=35;
+    sboard[no].x=428;
+    sboard[no].y=240;
+  }
+  if(no==12)
+  {
+    sboard[no].x=410;
+    sboard[no].y=268;
+  }
+  if(no==13)
+  {
+    sboard[no].x=410;
+    sboard[no].y=323;
+  }
+  if(no==14)
+  {
+    sboard[no].rot_angle=90;
+    sboard[no].height=35;
+    sboard[no].x=428;
+    sboard[no].y=295;
+  }
+  if(no==15)
+  {
+    sboard[no].rot_angle=90;
+    sboard[no].height=20;
+    sboard[no].x=388;
+    sboard[no].y=293;
+  }
+  sboard[no].object = createRectangle (black, sboard[no].height,sboard[no].width);
 }
 
 /* Initialize the OpenGL rendering properties */
@@ -1181,6 +1337,8 @@ void initGL (GLFWwindow* window, int width, int height)
   create_cannon();
   create_mirror();
   brick_initializer();
+  for(int i=1;i<=15;i++)
+    create_board(i);
 
   objects["mainline"].object=createLine(black,-500,partition,500,partition); // Generate the VAO, VBOs, vertices data & copy into the array buffer
 
