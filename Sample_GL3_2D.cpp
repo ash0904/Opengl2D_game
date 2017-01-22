@@ -264,12 +264,13 @@ void draw3DObject (struct VAO* vao)
 float x_change = 0; //For the camera pan
 float y_change = 0; //For the camera pan
 float zoom_camera = 1;
-float degree_per_rotation=1,brick_speed=-2,partition=-190,lazer_speed=20,bucket_speed=10;
+float brick_speed=-2,brick_dy=-0.5;
+float degree_per_rotation=1,partition=-190,lazer_speed=20,bucket_speed=10;
 double mouse_pos_x=0, mouse_pos_y=0;
 double new_mouse_pos_x=0, new_mouse_pos_y=0;
 double time_diff=0, current_time,old_time,laz_time,laz_old_time,m_col_time;
 COLOR col[3]={black,red,green};
-long long score=0,laz_no=0,mleft_click=0,mright_click=0;
+long long score=0,laz_no=0,mleft_click=0,mright_click=0,kleft_click=0,kright_click=0,ctrl=0,alt=0,mis_hit=6;
 
 void create_lazer(int no);
 /* Executed when a regular key is pressed/released/held-down */
@@ -328,18 +329,20 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                 check_pan();
                 break;
             case GLFW_KEY_RIGHT:
+                kright_click=0;
                 x_change+=10;
                 check_pan();
                 break;
             case GLFW_KEY_LEFT:
+                kleft_click=0;
                 x_change-=10;
                 check_pan();
                 break;
-            case GLFW_KEY_N:
+            case GLFW_KEY_V:
                 y_change+=10;
                 check_pan();
                 break;
-            case GLFW_KEY_M:
+            case GLFW_KEY_B:
                 y_change-=10;
                 check_pan();
                 break;
@@ -361,23 +364,14 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
             case GLFW_KEY_D:
                 cannon["front"].key_press=0;
                 break;
-            case GLFW_KEY_J:
-                bucket["red"].dx=0;
-                bucket["red"].key_press=0;
+            case GLFW_KEY_N:
+                if(brick_speed-brick_dy>-8)
+                  brick_speed+=brick_dy;
                 break;
-            case GLFW_KEY_L:
-                bucket["red"].dx=0;
-                bucket["red"].key_press=0;
+            case GLFW_KEY_M:
+                if(brick_speed-brick_dy<-2)
+                  brick_speed-=brick_dy;
                 break;
-            case GLFW_KEY_I:
-                bucket["green"].dx=0;
-                bucket["green"].key_press=0;
-                break;
-            case GLFW_KEY_K:
-                bucket["green"].dx=0;
-                bucket["green"].key_press=0;
-                break;
-
             case GLFW_KEY_SPACE:
                 if(current_time-laz_old_time>1)
                 {
@@ -386,7 +380,17 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
                   laz_old_time=current_time;
                 }
                 break;
-            case GLFW_KEY_X:
+            case GLFW_KEY_LEFT_CONTROL:
+                ctrl=0;
+                break;
+            case GLFW_KEY_RIGHT_CONTROL:
+                ctrl=0;
+                break;
+            case GLFW_KEY_LEFT_ALT:
+                alt=0;
+                break;
+            case GLFW_KEY_RIGHT_ALT:
+                alt=0;
                 break;
             default:
                 break;
@@ -404,36 +408,67 @@ void keyboard (GLFWwindow* window, int key, int scancode, int action, int mods)
               cannon["front"].dy=-3;
               cannon["main"].key_press=1;
               break;
-          case GLFW_KEY_J:
-              bucket["red"].dx=-1*bucket_speed;
-              bucket["red"].key_press=1;
-              break;
-          case GLFW_KEY_L:
-              bucket["red"].dx=bucket_speed;
-              bucket["red"].key_press=1;
-              break;
-          case GLFW_KEY_I:
-              bucket["green"].dx=-1*bucket_speed;
-              bucket["green"].key_press=1;
-              break;
-          case GLFW_KEY_K:
-              bucket["green"].dx=bucket_speed;
-              bucket["green"].key_press=1;
-              break;
           case GLFW_KEY_A:
               cannon["front"].key_press=1;
               break;
           case GLFW_KEY_D:
               cannon["front"].key_press=2;
               break;
-          case GLFW_KEY_SPACE:
+          case GLFW_KEY_LEFT_CONTROL:
+              ctrl=1;
+              break;
+          case GLFW_KEY_RIGHT_CONTROL:
+              ctrl=1;
+              break;
+          case GLFW_KEY_LEFT_ALT:
+              alt=1;
+              break;
+          case GLFW_KEY_RIGHT_ALT:
+              alt=1;
+              break;
+          case GLFW_KEY_RIGHT:
+              kright_click=1;
+              break;
+          case GLFW_KEY_LEFT:
+              kleft_click=1;
               break;
           case GLFW_KEY_ESCAPE:
-                quit(window);
-                break;
+              quit(window);
+              break;
           default:
                 break;
         }
+    }
+    if(ctrl && kleft_click)
+    {
+      bucket["red"].dx=-1*bucket_speed;
+      bucket["red"].key_press=1;
+    }
+    else if(ctrl && kright_click)
+    {
+      bucket["red"].dx=bucket_speed;
+      bucket["red"].key_press=1;
+    }
+    else
+    {
+      bucket["red"].dx=0;
+      bucket["red"].key_press=0;
+    }
+
+    if(alt && kleft_click)
+    {
+      bucket["green"].dx=-1*bucket_speed;
+      bucket["green"].key_press=1;
+    }
+     else if(alt && kright_click)
+    {
+      bucket["green"].dx=bucket_speed;
+      bucket["green"].key_press=1;
+    }
+    else
+    {
+      bucket["green"].dx=0;
+      bucket["green"].key_press=0;
     }
 }
 
@@ -469,11 +504,8 @@ void mouseButton (GLFWwindow* window, int button, int action, int mods)
                 move="green";
               else if(abs(new_mouse_pos_x-c1.x)<c1.width/2 && abs(new_mouse_pos_y-c1.y)<c1.height/2)
                 move="cmain";
-
               else
                 move="dont";
-                // cout<<c1.width/2 << " "<<c1.height/2<<endl;
-                // cout<<abs(new_mouse_pos_x-500-c1.x) << " "<< abs(new_mouse_pos_y-350-c1.y)<<endl;
             }
             if (action == GLFW_RELEASE)
             {
@@ -671,7 +703,7 @@ void display(Sprite obj,glm::mat4 VP)
 
 int flag=1;
 int i=10,arr[101]={0},it=0;
-void display_brick(glm::mat4 VP)
+void display_brick(glm::mat4 VP,GLFWwindow* window)
 {
   int rand1;
   current_time=glfwGetTime();
@@ -694,12 +726,24 @@ void display_brick(glm::mat4 VP)
           reset_brick(k);
           if(match_color(brick[k].color,red))
             if(brick[k].x>bucket["red"].x-bucket["red"].width/2 && brick[k].x<bucket["red"].x+bucket["red"].width/2)
-              score+=2;
+              {
+                score+=1;
+                cout<<"Score: "<<score<<endl;
+              }
           if(match_color(brick[k].color,green))
             if(brick[k].x>bucket["green"].x-bucket["green"].width/2 && brick[k].x<bucket["green"].x+bucket["green"].width/2)
-              score+=2;
+            {
+              score+=1;
+              cout<<"Score: "<<score<<endl;
+            }
           if(match_color(brick[k].color,black))
-            score-=2;
+          if(brick[k].x>bucket["green"].x-bucket["green"].width/2 && brick[k].x<bucket["green"].x+bucket["green"].width/2
+          || (brick[k].x>bucket["red"].x-bucket["red"].width/2 && brick[k].x<bucket["red"].x+bucket["red"].width/2) )
+          {
+            cout<<"Final score is: "<<score<<endl;
+            cout<<"Game Over\n";
+            quit(window);
+          }
         }
       }
     }
@@ -737,7 +781,7 @@ void display_buckets(glm::mat4 VP,GLFWwindow* window)
 }
 /* Edit this function according to your assignment */
 long long st1=0,st2=0;
-void detect_collision()
+void detect_collision(GLFWwindow* window)
 {
   long long li,bi;
   float temp=glfwGetTime();
@@ -757,14 +801,26 @@ void detect_collision()
           dis=sqrt((lobj.x-bobj.x)*(lobj.x-bobj.x) +(lobj.y-bobj.y)*(lobj.y-bobj.y));
           dis1=lobj.height*abs(cos(lobj.rot_angle*M_PI/180)/2) + bobj.width/2;
           dis2=lobj.height*abs(sin(lobj.rot_angle*M_PI/180)/2) + bobj.height/2;
-          //cout<<dis<<" "<<dis1<<" "<<dis2<<endl;
           if(dis<dis1 || dis<dis2)
           {
             if(match_color(bobj.color,black))
-              score+=4;
+              {
+                score+=2;
+                cout<<"Score: "<<score<<endl;
+              }
             if(match_color(bobj.color,red) || match_color(bobj.color,green))
-              score-=2;
-                // cout<<"collision\n";
+              {
+                score-=1;
+                mis_hit--;
+                cout<<mis_hit<<" (miss hit remaining)\n";
+                cout<<"Score: "<<score<<endl;
+                if(mis_hit==0)
+                {
+                  cout<<"Final score is: "<<score<<endl;
+                  cout<<"Game Over\n";
+                  quit(window);
+                }
+              }
             lazer[li].status=0;
             reset_brick(bi);
           }
@@ -798,24 +854,21 @@ void check_mirror_col(int li)
         //     cout << "collide mirror" << endl;
         //     lazer[li].rot_angle = 2*mirror[current].rot_angle - lazer[li].rot_angle;
         // }
-          float mul1,mul2;
-          mul1=(laz.y+laz.width/2*sin(laz.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(laz.x+laz.width/2*cos(laz.rot_angle*M_PI/180)))-
-                (mir.y+mir.width/2*sin(mir.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(mir.x+mir.width/2)*cos(mir.rot_angle*M_PI/180));
-          mul2=(laz.y-laz.width/2*sin(laz.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(laz.x-laz.width/2*cos(laz.rot_angle*M_PI/180)))-
-                (mir.y+mir.width/2*sin(mir.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(mir.x+mir.width/2)*cos(mir.rot_angle*M_PI/180));
+          // float mul1,mul2;
+          // mul1=(laz.y+laz.width/2*sin(laz.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(laz.x+laz.width/2*cos(laz.rot_angle*M_PI/180)))-
+          //       (mir.y+mir.width/2*sin(mir.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(mir.x+mir.width/2)*cos(mir.rot_angle*M_PI/180));
+          // mul2=(laz.y-laz.width/2*sin(laz.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(laz.x-laz.width/2*cos(laz.rot_angle*M_PI/180)))-
+          //       (mir.y+mir.width/2*sin(mir.rot_angle*M_PI/180))-(tan(mir.rot_angle*M_PI/180)*(mir.x+mir.width/2)*cos(mir.rot_angle*M_PI/180));
           // if(mul1*mul2<=0)
           // if(lazmir[li][0]==0 || lazmir[current][1]==0)
           current_time=glfwGetTime();
           // cout << "collide mirror" << endl;
           if(current_time-m_col_time>0.1)
           {
-            // cout << "rotated" << endl;
-
-              lazer[li].rot_angle = 2*mirror[current].rot_angle - lazer[li].rot_angle;
-              lazmir[li][0]=1;
-              lazmir[current][1]=1;
-
-              m_col_time=current_time;
+            lazer[li].rot_angle = 2*mirror[current].rot_angle - lazer[li].rot_angle;
+            lazmir[li][0]=1;
+            lazmir[current][1]=1;
+            m_col_time=current_time;
           }
         }
     }
@@ -878,7 +931,7 @@ void draw (GLFWwindow* window){
   Matrices.projection = glm::ortho((-500.0f/zoom_camera+x_change), (500.0f/zoom_camera+x_change), (-350.0f/zoom_camera+y_change),(350.0f/zoom_camera+y_change), 0.1f, 500.0f);
   glfwGetCursorPos(window, &mouse_pos_x, &mouse_pos_y);
 
-  detect_collision();
+  detect_collision(window);
   // cout<<current_time<<" "<<m_col_time<<endl;
     // cout<<" checking collision \n";
     for(int li=0;li<laz_no;li++)
@@ -925,7 +978,7 @@ void draw (GLFWwindow* window){
   display(cannon["front"],VP);
   //if(bucket["red"].key_press==1 || bucket["green"].key_press==1)
   display_buckets(VP,window);
-  display_brick(VP);
+  display_brick(VP,window);
   display(mirror[1],VP);
   display(mirror[3],VP);
   display(mirror[2],VP);
@@ -941,7 +994,7 @@ GLFWwindow* initGLFW (int width, int height)
 
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
-//        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -1015,19 +1068,19 @@ void create_cannon()
   cannon["main"].dy=0;
   cannon["main"].color=blue;
   cannon["main"].width=50;
-  cannon["main"].height=35;
+  cannon["main"].height=40;
   cannon["main"].object = createRectangle (blue, cannon["main"].height,cannon["main"].width);
   cannon["main"].x=-500+cannon["main"].width/2;
   cannon["main"].y=0;
   cannon["front"].name="gun";
   cannon["front"].dx=0;
   cannon["front"].dy=0;
-  cannon["front"].color=blue;
-  cannon["front"].width=35;
+  cannon["front"].color=darkbrown;
+  cannon["front"].width=40;
   cannon["front"].height=20;
   cannon["front"].rot_angle=0;
-  cannon["front"].object = createRectangle (blue, cannon["front"].height,cannon["front"].width);
-  cannon["front"].x=-500+cannon["main"].width+cannon["front"].width/2;
+  cannon["front"].object = createRectangle (darkbrown, cannon["front"].height,cannon["front"].width);
+  cannon["front"].x=-500+cannon["main"].width+cannon["front"].width/2-10;
   cannon["front"].y=0;
 }
 
@@ -1038,7 +1091,7 @@ void create_lazer(int no)
   lazer[no].width=100;
   lazer[no].height=5;
   lazer[no].object = createRectangle (lightblue, lazer[no].height,lazer[no].width);
-  lazer[no].x=-500+cannon["main"].width+cannon["front"].width;
+  lazer[no].x=cannon["front"].x;
   lazer[no].y=cannon["front"].y;
   lazer[no].rot_angle=cannon["front"].rot_angle;
   lazer[no].status=1;
