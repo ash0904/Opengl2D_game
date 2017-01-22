@@ -1,0 +1,35 @@
+/* Brick Breaker
+   Made By Harshit Mahajan */
+
+Compiling and Running the game :-
+
+    1)To compile just run make
+    2)Then do ./sample2D to start the game
+
+Controls :-
+    Mouse ->
+      1) Hold and Drag basket and Cannon(Lazer Gun) to required place.
+      2) To shoot Lazer, Left click at any point inside the shooting region.
+      3) To Zoom, use scrolling.
+      4) Right mouse button to pan left/right when you click and drag.
+
+    Keyboard ->
+      1) 'a' to tilt cannon-gun upward, 'd' to tilt downward.
+      2) 's' to move cannon up, 'f' to move down.
+      3) 'n' to decrease brick speed, 'm' to increase it.
+      4) 'Ctrl+Left', 'Ctrl+Right' to move red basket.
+      5) 'Alt+Left', 'Alt+Right' to move green basket.
+      6)  'Left/Right' Keys to pan the scene.
+      7) 'up/down' keys to zoom(in/out).
+
+Scoring :-
+    1) '+1' on collecting brick in the matching coloured basket.
+    2) '+1' on hitting Black Brick, '-1' for hitting others.
+    3) Game Overs if more than 6 wrong bricks are hit or any black brick is collected in any of the baskets.
+
+About the Game :-
+    1) Get as high score as possible(at 99 you win! and -99 you lose).
+    2) Scoring done using 7 segment.
+    3) Score is DISPLAYED at top right and remaining miss-hits on terminal.
+    4) Use mirror efficiently and effectively.
+
