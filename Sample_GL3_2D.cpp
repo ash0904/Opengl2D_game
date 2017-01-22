@@ -789,7 +789,8 @@ void detect_collision(GLFWwindow* window)
   float temp=glfwGetTime();
   float dis,dis1,dis2;
   //if(current_time-temp>5)
-  //st1++;mis_hit<<  for(li=st1;li<laz_no;li++)
+  //st1++;mis_hit<<
+  for(li=st1;li<laz_no;li++)
     {
       Sprite lobj=lazer[li],bobj;
       if(lobj.status==1)
